@@ -9,6 +9,8 @@
     "typecheck": "react-router typegen && tsc"
   },
   "dependencies": {
+    "@mantine/core": "^9.6.1",
+    "@mantine/hooks": "^9.6.1",
     "@react-router/node": "^8",
     "@react-router/serve": "^8",
     "isbot": "^5.1.36",

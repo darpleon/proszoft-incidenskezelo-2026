@@ -3,6 +3,13 @@
 @import "tailwindcss";
 @import "@mantine/core/styles.layer.css";
 
+@theme {
+  --color-brand: #7a3e22;
+  --color-header: #ecdcd5;
+  --color-header-line: #e0c6b9;
+  --color-header-muted: #75574a;
+}
+
 body {
   background-color: var(--mantine-color-gray-0);
 }

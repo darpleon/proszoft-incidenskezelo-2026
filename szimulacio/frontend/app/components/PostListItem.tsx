@@ -30,7 +30,7 @@ export function PostListItem({ post }: PostListItemProps) {
         >
           <Link
             to={`/post/${post.slug}`}
-            className="text-black no-underline hover:text-[var(--mantine-color-blue-7)] hover:underline"
+            className="text-black no-underline hover:text-brand hover:underline"
           >
             {post.title}
           </Link>

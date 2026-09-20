@@ -1,0 +1,29 @@
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: db
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=SuperStrong!Passw0rd123
+    ports:
+      - "1433:1433"
+    networks:
+      - net
+
+  backend:
+    build:
+      context: ./src/backend
+      dockerfile: backend.dockerfile
+    container_name: backend
+    environment:
+      - ConnectionStrings__DefaultConnection=Server=db;Database=master;User Id=sa;Password=SuperStrong!Passw0rd123;TrustServerCertificate=True;
+    ports:
+      - "5000:8080"
+    depends_on:
+      - db
+    networks:
+      - net
+
+networks:
+  net:
+    driver: bridge

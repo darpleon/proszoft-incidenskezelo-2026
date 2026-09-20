@@ -9,6 +9,27 @@ services:
       - "1433:1433"
     volumes:
       - db-data:/var/opt/mssql
+    networks:
+      - net
+
+  backend:
+    build:
+      context: ./incidenskezelo-backend/
+    container_name: backend
+    environment:
+      # TODO: shouldn't hard-code development environment
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=db;Database=Incidenskezelo;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;
+    ports:
+      - "5000:8080"
+    depends_on:
+      - db
+    networks:
+      - net
+
+networks:
+  net:
+    driver: bridge
 
 volumes:
   db-data:

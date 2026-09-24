@@ -3,7 +3,7 @@ using Microsoft.Data.SqlClient;
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
 
-app.MapGet("/", () => "PoC Backend is up!");
+app.MapGet("/", () => "Backend is up!");
 
 app.MapGet("/db-check", async (IConfiguration config) =>
 {

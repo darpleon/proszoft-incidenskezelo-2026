@@ -1,15 +1,17 @@
+using incidenskezelo_backend.Data;
 using Microsoft.AspNetCore.Mvc;
 
 namespace incidenskezelo_backend.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    public class HealthController : ControllerBase
+    public class HealthController(AppDbContext dbContext) : ControllerBase
     {
         [HttpGet(Name = "GetHealth")]
-        public IActionResult Get()
+        public async Task<IActionResult> Get()
         {
-            return Ok(new { status = "ok" });
+            var databaseConnected = await dbContext.Database.CanConnectAsync();
+            return Ok(new { status = "ok", database = databaseConnected ? "ok" : "unavailable" });
         }
     }
 }

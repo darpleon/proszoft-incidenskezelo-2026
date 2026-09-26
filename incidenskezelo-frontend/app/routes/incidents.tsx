@@ -1,4 +1,6 @@
-import { Title } from "@mantine/core";
+import { Outlet } from "react-router";
+import { IncidentList } from "~/components/IncidentList";
+import { incidents } from "~/data/incidents";
 import type { Route } from "./+types/incidents";
 
 export function meta({}: Route.MetaArgs) {
@@ -7,10 +9,11 @@ export function meta({}: Route.MetaArgs) {
 
 export default function Incidents() {
   return (
-    <div className="p-6">
-      <Title order={1} size="h3">
-        Incidensek
-      </Title>
+    <div className="flex w-full min-w-0 max-[920px]:flex-col">
+      <IncidentList incidents={incidents} />
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <Outlet />
+      </main>
     </div>
   );
 }

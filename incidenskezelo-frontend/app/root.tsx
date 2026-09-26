@@ -1,4 +1,10 @@
 import {
+  ColorSchemeScript,
+  MantineProvider,
+  createTheme,
+  mantineHtmlProps,
+} from "@mantine/core";
+import {
   isRouteErrorResponse,
   Links,
   Meta,
@@ -10,17 +16,33 @@ import {
 import type { Route } from "./+types/root";
 import "./app.css";
 
+const theme = createTheme({
+  fontFamily: "Instrument Sans, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif",
+});
+
+export const links: Route.LinksFunction = () => [
+  { rel: "preconnect", href: "https://fonts.googleapis.com" },
+  { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+  {
+    rel: "stylesheet",
+    href: "https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap",
+  },
+];
+
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="hu">
+    <html lang="hu" {...mantineHtmlProps}>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <ColorSchemeScript forceColorScheme="light" />
         <Meta />
         <Links />
       </head>
       <body>
-        {children}
+        <MantineProvider theme={theme} forceColorScheme="light">
+          {children}
+        </MantineProvider>
         <ScrollRestoration />
         <Scripts />
       </body>

@@ -2,18 +2,12 @@ import { Button, Group, Text } from "@mantine/core";
 import { NavLink } from "react-router";
 import { BackendStatus } from "./BackendStatus";
 import { currentUser } from "~/data/currentUser";
+import { getInitials } from "~/lib/initials";
 
 const navItems = [
   { to: "/incidents", label: "Incidensek" },
   { to: "/events", label: "Események" },
 ];
-
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .map((part) => part[0])
-    .join("");
-}
 
 export function AppHeader() {
   return (

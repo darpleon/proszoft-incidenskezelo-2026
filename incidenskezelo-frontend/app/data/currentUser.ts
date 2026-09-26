@@ -1,7 +1,4 @@
 import type { IUser } from "~/interfaces/IUser";
+import { users } from "./users";
 
-export const currentUser: IUser = {
-  userId: 3,
-  name: "Kovács Anna",
-  role: "operátor",
-};
+export const currentUser: IUser = users[0];

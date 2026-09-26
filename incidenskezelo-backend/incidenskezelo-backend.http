@@ -1,6 +1,0 @@
-@incidenskezelo_backend_HostAddress = http://localhost:5041
-
-GET {{incidenskezelo_backend_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

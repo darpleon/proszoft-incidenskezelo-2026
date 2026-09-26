@@ -1,3 +1,4 @@
+import type { EventSeverity } from "~/interfaces/IEvent";
 import type { IncidentPriority, IncidentStatus } from "~/interfaces/IIncident";
 
 export const statusLabels: Record<IncidentStatus, string> = {
@@ -40,3 +41,18 @@ export const priorityTextColors: Record<IncidentPriority, string> = {
 export function isOpen(status: IncidentStatus) {
   return status !== "Resolved" && status !== "Closed";
 }
+
+export const severityLabels: Record<EventSeverity, string> = priorityLabels;
+
+export const severityTextColors: Record<EventSeverity, string> = priorityTextColors;
+
+export const eventTypeLabels: Record<string, string> = {
+  DbConnectionError: "Adatbázis-kapcsolati hiba",
+  HighLatency: "Magas válaszidő",
+  ErrorRateIncrease: "Megnövekedett hibaarány",
+  JobFailed: "Sikertelen háttérfolyamat",
+  CapacityIssue: "Kapacitásprobléma",
+  ServiceRecovered: "Szolgáltatás helyreállása",
+  CertificateExpiring: "Tanúsítvány lejárati figyelmeztetés",
+  DependencyFailure: "Függő szolgáltatás hibája",
+};

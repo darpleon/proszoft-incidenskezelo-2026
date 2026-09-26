@@ -33,7 +33,9 @@ export function IncidentListItem({ incident }: IncidentListItemProps) {
           <span>{statusLabels[incident.status]}</span>
         )}
         {service && <span>{service.code}</span>}
-        <span className="ml-auto text-text-3">{formatAge(incident.createdAtUtc)}</span>
+        <span className="ml-auto text-text-3" suppressHydrationWarning>
+          {formatAge(incident.createdAtUtc)}
+        </span>
       </span>
     </NavLink>
   );

@@ -1,8 +1,5 @@
 import type { IIncident } from "~/interfaces/IIncident";
-
-function minutesAgo(minutes: number) {
-  return new Date(Date.now() - minutes * 60_000).toISOString();
-}
+import { minutesAgo } from "./mockTime";
 
 export const incidents: IIncident[] = [
   {

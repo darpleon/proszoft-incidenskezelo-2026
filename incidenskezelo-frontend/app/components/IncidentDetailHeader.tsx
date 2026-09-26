@@ -2,6 +2,7 @@ import { Text, Title } from "@mantine/core";
 import { DetailField } from "./DetailField";
 import { StatusRing } from "./StatusRing";
 import { users } from "~/data/users";
+import type { IEvent } from "~/interfaces/IEvent";
 import type { IIncident } from "~/interfaces/IIncident";
 import { formatAge } from "~/lib/format";
 import { getInitials } from "~/lib/initials";
@@ -15,10 +16,13 @@ import {
 
 type IncidentDetailHeaderProps = {
   incident: IIncident;
+  events: IEvent[];
 };
 
-export function IncidentDetailHeader({ incident }: IncidentDetailHeaderProps) {
+export function IncidentDetailHeader({ incident, events }: IncidentDetailHeaderProps) {
   const assignee = users.find((user) => user.userId === incident.assigneeUserId);
+  const duplicateCount = events.filter((event) => event.processingState === "Duplicate").length;
+  const linkedCount = events.length - duplicateCount;
 
   return (
     <div className="px-[22px] pt-[22px] max-[680px]:px-4">
@@ -56,8 +60,14 @@ export function IncidentDetailHeader({ incident }: IncidentDetailHeaderProps) {
         </DetailField>
 
         <DetailField label="Nyitva">
-          <span className={isOpen(incident.status) ? "text-crit" : "font-medium text-text-2"}>
+          <span className={isOpen(incident.status) ? "text-crit" : "font-medium text-text-2"} suppressHydrationWarning>
             {formatAge(incident.createdAtUtc)}
+          </span>
+        </DetailField>
+
+        <DetailField label="Események">
+          <span className="font-medium text-text-2">
+            {linkedCount} kapcsolt{duplicateCount > 0 && `, ${duplicateCount} elvetve`}
           </span>
         </DetailField>
       </div>

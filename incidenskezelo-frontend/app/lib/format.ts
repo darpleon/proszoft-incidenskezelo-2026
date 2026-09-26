@@ -9,3 +9,14 @@ export function formatAge(fromUtc: string): string {
 
   return `${Math.floor(hours / 24)} napja`;
 }
+
+const timeFormat = new Intl.DateTimeFormat("hu-HU", {
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  timeZone: "Europe/Budapest",
+});
+
+export function formatTime(utc: string): string {
+  return timeFormat.format(new Date(utc));
+}

@@ -17,11 +17,21 @@ services:
     environment:
       - ConnectionStrings__DefaultConnection=Server=db;Database=IncidensKezelo;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;
     ports:
-      - "80:8080"
+      - "8080:8080"
     depends_on:
       - db
     networks:
       - net
+
+  frontend:
+    build: 
+      context: ./incidenskezelo-frontend/
+    ports:
+      - "80:80"
+    networks:
+      - net
+    depends_on:
+      - backend
 
 networks:
   net:

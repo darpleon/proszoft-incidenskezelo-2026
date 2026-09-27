@@ -1,10 +1,16 @@
 services:
   db:
     ports:
-      - "1433:1433" # Exposes database to host for local SQL inspection tools
+      - "1433:1433"
 
   backend:
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development # Overrides Production default
-    ports:
-      - "5000:8080" # Overrides 80:8080 with standard local dev port 5000
+      - ASPNETCORE_ENVIRONMENT=Development
+    ports: !override
+      - "5000:8080"
+
+  frontend:
+    ports: !override
+      - "3000:80"
+    depends_on:
+      - backend

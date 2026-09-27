@@ -5,10 +5,27 @@ services:
     environment:
       - ACCEPT_EULA=Y
       - MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD}
-    ports:
-      - "1433:1433"
     volumes:
       - db-data:/var/opt/mssql
+    networks:
+      - net
+
+  backend:
+    build:
+      context: ./incidenskezelo-backend/
+    container_name: backend
+    environment:
+      - ConnectionStrings__DefaultConnection=Server=db;Database=IncidensKezelo;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;
+    ports:
+      - "80:8080"
+    depends_on:
+      - db
+    networks:
+      - net
+
+networks:
+  net:
+    driver: bridge
 
 volumes:
   db-data:

@@ -20,6 +20,12 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    dbContext.Database.Migrate();
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -27,12 +33,14 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "v1"));
 }
 
-app.UseHttpsRedirection();
+// NOTE: Doesn't work in containers without extra work.
+// We could set up a reverse proxy (making this redundant).
+// Or do manual HTTPS certificate management.
+//
+// app.UseHttpsRedirection();
 
 app.UseCors();
-
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();

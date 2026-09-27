@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace incidenskezelo_backend.Controllers
 {
     [ApiController]
-    [Route("[controller]")]
+    [Route("api/[controller]")]
     public class HealthController(AppDbContext dbContext) : ControllerBase
     {
         [HttpGet(Name = "GetHealth")]

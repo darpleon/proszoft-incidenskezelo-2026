@@ -28,6 +28,8 @@ services:
       context: ./incidenskezelo-frontend/
     ports:
       - "80:80"
+    networks:
+      - net
     depends_on:
       - backend
 

@@ -1,4 +1,6 @@
 using incidenskezelo_backend.Data;
+using incidenskezelo_backend.Configuration;
+using incidenskezelo_backend.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,6 +19,11 @@ builder.Services.AddCors(options =>
         policy.WithOrigins(builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? [])
             .AllowAnyHeader()
             .AllowAnyMethod()));
+
+builder.Services.Configure<GeminiOptions>(
+    builder.Configuration.GetSection("Gemini"));
+
+builder.Services.AddHttpClient<IAiService, GeminiService>();
 
 var app = builder.Build();
 

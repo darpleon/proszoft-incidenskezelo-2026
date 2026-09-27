@@ -5,8 +5,6 @@ services:
     environment:
       - ACCEPT_EULA=Y
       - MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD}
-    ports:
-      - "1433:1433"
     volumes:
       - db-data:/var/opt/mssql
     networks:
@@ -17,11 +15,9 @@ services:
       context: ./incidenskezelo-backend/
     container_name: backend
     environment:
-      # TODO: shouldn't hard-code development environment
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Server=db;Database=Incidenskezelo;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;
+      - ConnectionStrings__DefaultConnection=Server=db;Database=IncidensKezelo;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;
     ports:
-      - "5000:8080"
+      - "80:8080"
     depends_on:
       - db
     networks:

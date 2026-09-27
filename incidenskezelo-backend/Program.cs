@@ -33,12 +33,14 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "v1"));
 }
 
-app.UseHttpsRedirection();
+// NOTE: Doesn't work in containers without extra work.
+// We could set up a reverse proxy (making this redundant).
+// Or do manual HTTPS certificate management.
+//
+// app.UseHttpsRedirection();
 
 app.UseCors();
-
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();

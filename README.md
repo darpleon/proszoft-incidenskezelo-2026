@@ -14,3 +14,9 @@ docker compose up --build
 # run
 docker compose up
 ```
+(automatically picks up dev settings from `docker-compose.override.yml`)
+
+**prod:**
+```
+docker compose -f docker-compose.yml up --build
+```

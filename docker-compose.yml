@@ -1,25 +1,48 @@
 services:
   db:
     image: mcr.microsoft.com/mssql/server:2025-latest
-    container_name: db
     environment:
       - ACCEPT_EULA=Y
       - MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1'"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 15s
     volumes:
       - db-data:/var/opt/mssql
+    networks:
+      - net
+
+  migrations:
+    # One-shot job: the backend image with its entrypoint overridden to run
+    # the embedded migration bundle; exits 0 before the backend starts.
+    build:
+      context: ./incidenskezelo-backend/
+    image: incidenskezelo-backend
+    entrypoint: ["./migrate"]
+    environment:
+      - ConnectionStrings__DefaultConnection=Server=db;Database=IncidensKezelo;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;
+    depends_on:
+      db:
+        condition: service_healthy
     networks:
       - net
 
   backend:
     build:
       context: ./incidenskezelo-backend/
-    container_name: backend
+    image: incidenskezelo-backend
     environment:
       - ConnectionStrings__DefaultConnection=Server=db;Database=IncidensKezelo;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;
     ports:
       - "8080:8080"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
     networks:
       - net
 
@@ -31,7 +54,11 @@ services:
     networks:
       - net
     depends_on:
-      - backend
+      backend:
+        condition: service_started
+        # nginx resolves `backend` once at startup: if the backend container is
+        # ever recreated (new IP), the frontend must be recreated with it.
+        restart: true
 
 networks:
   net:

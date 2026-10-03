@@ -21,7 +21,6 @@ export function IncidentListItem({ incident }: IncidentListItemProps) {
       }
     >
       <span className={`absolute top-2 bottom-2 left-0 w-[3px] rounded-r-sm ${priorityColors[incident.priority]}`} />
-      <span className="absolute inset-y-0 right-0 hidden w-0.5 bg-petrol group-aria-[current=page]:block" />
 
       <span className="mb-1 block text-[13px] leading-snug font-medium tracking-[-0.01em] group-aria-[current=page]:font-semibold">
         {incident.title}

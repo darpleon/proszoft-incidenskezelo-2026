@@ -9,10 +9,12 @@ namespace backend.Controllers;
 public class SimulatorController : ControllerBase
 {
     private readonly SimulatorService _simulator;
+    private readonly IncidentApiClient _incidentApi;
 
-    public SimulatorController(SimulatorService simulator)
+    public SimulatorController(SimulatorService simulator, IncidentApiClient incidentApi)
     {
         _simulator = simulator;
+        _incidentApi = incidentApi;
     }
 
     [HttpGet("status")]
@@ -24,10 +26,19 @@ public class SimulatorController : ControllerBase
     }
 
     [HttpPost("generate")]
-    public ActionResult<SimulationEvent> GenerateEvent()
+    public async Task<IActionResult> GenerateEvent(CancellationToken cancellationToken)
     {
         var simulatedEvent = _simulator.GenerateEvent();
 
-        return Ok(simulatedEvent);
+        try
+        {
+            using var response = await _incidentApi.SendEventAsync(simulatedEvent, cancellationToken);
+
+            return Ok(new { simulatedEvent, deliveryStatusCode = (int)response.StatusCode });
+        }
+        catch (HttpRequestException)
+        {
+            return StatusCode(StatusCodes.Status502BadGateway, new { simulatedEvent, error = "Incident API is not reachable." });
+        }
     }
 }

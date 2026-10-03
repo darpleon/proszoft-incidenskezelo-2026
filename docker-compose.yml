@@ -36,8 +36,6 @@ services:
     image: incidenskezelo-backend
     environment:
       - ConnectionStrings__DefaultConnection=Server=db;Database=IncidensKezelo;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;
-    ports:
-      - "8080:8080"
     depends_on:
       db:
         condition: service_healthy

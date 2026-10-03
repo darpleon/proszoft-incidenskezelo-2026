@@ -4,8 +4,8 @@ import { minutesAgo } from "./mockTime";
 export const incidents: IIncident[] = [
   {
     incidentId: 2041,
-    title: "Adatbázis-kapcsolat megszakadt",
-    description: "A postgres-main elutasítja a bejövő kapcsolatokat. Négy szolgáltatás érintett a függőségi láncban.",
+    title: "Database connection lost",
+    description: "postgres-main is refusing incoming connections. Four services in the dependency chain are affected.",
     status: "Investigating",
     priority: "Critical",
     serviceId: 1,
@@ -16,8 +16,8 @@ export const incidents: IIncident[] = [
   },
   {
     incidentId: 2040,
-    title: "Éjszakai számlazárás nem futott le",
-    description: "A batch-worker éjszakai futása hibával leállt, a számlák nem zárultak le.",
+    title: "Nightly invoice close did not run",
+    description: "The nightly batch-worker run failed, invoices were not closed.",
     status: "New",
     priority: "High",
     serviceId: 3,
@@ -28,8 +28,8 @@ export const incidents: IIncident[] = [
   },
   {
     incidentId: 2039,
-    title: "Emelkedő válaszidő a rendelési API-n",
-    description: "Az orders-api átlagos válaszideje a szokásos többszörösére nőtt.",
+    title: "Rising response time on the orders API",
+    description: "The average response time of orders-api is several times higher than usual.",
     status: "InProgress",
     priority: "High",
     serviceId: 2,
@@ -40,8 +40,8 @@ export const incidents: IIncident[] = [
   },
   {
     incidentId: 2038,
-    title: "Megnövekedett 5xx arány a portálon",
-    description: "A web-portal az elmúlt órában a szokásosnál több szerverhibát adott vissza.",
+    title: "Increased 5xx rate on the portal",
+    description: "web-portal returned more server errors than usual in the last hour.",
     status: "Investigating",
     priority: "Medium",
     serviceId: 4,
@@ -52,8 +52,8 @@ export const incidents: IIncident[] = [
   },
   {
     incidentId: 2037,
-    title: "Fájlfeldolgozó sorban álló tételek",
-    description: "A file-ingest sorában feltorlódtak a feldolgozásra váró fájlok.",
+    title: "File ingest queue backlog",
+    description: "Files waiting for processing have piled up in the file-ingest queue.",
     status: "InProgress",
     priority: "Medium",
     serviceId: 5,
@@ -64,8 +64,8 @@ export const incidents: IIncident[] = [
   },
   {
     incidentId: 2036,
-    title: "Fizetési átjáró átmeneti időtúllépés",
-    description: "A payment-gw néhány percig időtúllépéssel válaszolt, azóta helyreállt.",
+    title: "Temporary payment gateway timeout",
+    description: "payment-gw timed out for a few minutes and has recovered since.",
     status: "Resolved",
     priority: "Low",
     serviceId: 6,
@@ -76,8 +76,8 @@ export const incidents: IIncident[] = [
   },
   {
     incidentId: 2035,
-    title: "Tanúsítvány lejárati figyelmeztetés",
-    description: "A web-portal TLS-tanúsítványa 14 napon belül lejár.",
+    title: "Certificate expiry warning",
+    description: "The web-portal TLS certificate expires within 14 days.",
     status: "InProgress",
     priority: "Low",
     serviceId: 4,

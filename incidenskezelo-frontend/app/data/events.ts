@@ -10,7 +10,7 @@ export const events: IEvent[] = [
     severity: "Medium",
     occurredAtUtc: minutesAgo(11),
     processingState: "Failed",
-    summary: "Harmadik újrapróbálkozás is sikertelen, az esemény megőrizve.",
+    summary: "Third retry also failed, the event was kept.",
     payload: { retries: 3 },
   },
   {
@@ -21,7 +21,7 @@ export const events: IEvent[] = [
     severity: "Medium",
     occurredAtUtc: minutesAgo(13),
     processingState: "Processed",
-    summary: "Átlagos válaszidő 2,4 másodperc.",
+    summary: "Average response time 2.4 seconds.",
     payload: { p95Ms: 2400 },
   },
   {
@@ -32,7 +32,7 @@ export const events: IEvent[] = [
     severity: "Low",
     occurredAtUtc: minutesAgo(15),
     processingState: "Processed",
-    summary: "Helyreállási esemény, önmagában nem indokol incidenst.",
+    summary: "Recovery event, does not justify an incident on its own.",
     payload: {},
   },
   {
@@ -43,7 +43,7 @@ export const events: IEvent[] = [
     severity: "Medium",
     occurredAtUtc: minutesAgo(19),
     processingState: "Processed",
-    summary: "Válaszidő a küszöbérték felett.",
+    summary: "Response time above threshold.",
     payload: { p95Ms: 1800 },
   },
   {
@@ -54,7 +54,7 @@ export const events: IEvent[] = [
     severity: "Low",
     occurredAtUtc: minutesAgo(22),
     processingState: "Processed",
-    summary: "Küszöb alatti súlyosság, nem hozott létre incidenst.",
+    summary: "Severity below threshold, no incident created.",
     payload: { daysLeft: 14 },
   },
   {
@@ -65,7 +65,7 @@ export const events: IEvent[] = [
     severity: "High",
     occurredAtUtc: minutesAgo(26),
     processingState: "Processed",
-    summary: "5xx arány 8%.",
+    summary: "5xx rate 8%.",
     payload: { errorRate: 0.08 },
   },
   {
@@ -76,7 +76,7 @@ export const events: IEvent[] = [
     severity: "High",
     occurredAtUtc: minutesAgo(29),
     processingState: "Processed",
-    summary: "Késve érkezett, visszamenőleg fűzve az incidenshez.",
+    summary: "Arrived late, linked to the incident retroactively.",
     payload: { job: "nightly-invoice" },
   },
   {
@@ -87,7 +87,7 @@ export const events: IEvent[] = [
     severity: "Critical",
     occurredAtUtc: minutesAgo(28),
     processingState: "Duplicate",
-    summary: "Azonos idempotencia-kulcs, a meglévő eseményt nem írta felül.",
+    summary: "Same idempotency key, the existing event was not overwritten.",
     payload: { poolSize: 20 },
   },
   {
@@ -109,7 +109,7 @@ export const events: IEvent[] = [
     severity: "Critical",
     occurredAtUtc: minutesAgo(29),
     processingState: "Processed",
-    summary: "Ez az esemény hozta létre az incidenst.",
+    summary: "This event created the incident.",
     payload: { refusedConnections: 112 },
   },
   {
@@ -120,7 +120,7 @@ export const events: IEvent[] = [
     severity: "High",
     occurredAtUtc: minutesAgo(41),
     processingState: "Processed",
-    summary: "Az éjszakai számlazárás hibával leállt.",
+    summary: "The nightly invoice close failed.",
     payload: { job: "nightly-invoice" },
   },
   {
@@ -131,7 +131,7 @@ export const events: IEvent[] = [
     severity: "Medium",
     occurredAtUtc: minutesAgo(45),
     processingState: "Processed",
-    summary: "Feldolgozva, de egyetlen korrelációs szabály sem illeszkedett rá.",
+    summary: "Processed, but no correlation rule matched.",
     payload: {},
   },
   {
@@ -142,7 +142,7 @@ export const events: IEvent[] = [
     severity: "Medium",
     occurredAtUtc: minutesAgo(65),
     processingState: "Processed",
-    summary: "Válaszidő a küszöbérték felett.",
+    summary: "Response time above threshold.",
     payload: { p95Ms: 1500 },
   },
   {
@@ -153,7 +153,7 @@ export const events: IEvent[] = [
     severity: "Low",
     occurredAtUtc: minutesAgo(190),
     processingState: "Processed",
-    summary: "Külső szolgáltató időtúllépése.",
+    summary: "External provider timed out.",
     payload: {},
   },
   {
@@ -164,7 +164,7 @@ export const events: IEvent[] = [
     severity: "Low",
     occurredAtUtc: minutesAgo(200),
     processingState: "Processed",
-    summary: "A szolgáltatás újra elérhető.",
+    summary: "The service is available again.",
     payload: {},
   },
 ];

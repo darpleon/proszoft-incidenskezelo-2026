@@ -14,14 +14,14 @@ const cell = "border-t border-[#eff2f1] py-[11px] pr-3 align-top";
 
 function IncidentCell({ event }: { event: IEvent }) {
   if (event.processingState === "Duplicate") {
-    return <span className="text-[11.5px] font-medium whitespace-nowrap text-high">Duplikátum, nem került be</span>;
+    return <span className="text-[11.5px] font-medium whitespace-nowrap text-high">Duplicate, not added</span>;
   }
 
   if (event.incidentId === null) {
     return (
       <span className="inline-flex items-center gap-[7px] text-[11.5px] whitespace-nowrap text-text-3">
         <i className="size-[9px] rounded-full border-[1.5px] border-dashed border-text-3" />
-        Nincs incidenshez kötve
+        Not linked to an incident
       </span>
     );
   }
@@ -39,11 +39,11 @@ function IncidentCell({ event }: { event: IEvent }) {
 
 function ProcessingNote({ event }: { event: IEvent }) {
   if (event.processingState === "Duplicate") {
-    return <span className="ml-[7px] rounded-[3px] bg-[#fdf7ec] px-1.5 py-px text-[11.5px] font-medium whitespace-nowrap text-high">ismételt, elvetve</span>;
+    return <span className="ml-[7px] rounded-[3px] bg-[#fdf7ec] px-1.5 py-px text-[11.5px] font-medium whitespace-nowrap text-high">repeated, discarded</span>;
   }
 
   if (event.processingState === "Failed") {
-    return <span className="ml-[7px] rounded-[3px] bg-[#fdf2f1] px-1.5 py-px text-[11.5px] font-medium whitespace-nowrap text-crit">feldolgozás sikertelen</span>;
+    return <span className="ml-[7px] rounded-[3px] bg-[#fdf2f1] px-1.5 py-px text-[11.5px] font-medium whitespace-nowrap text-crit">processing failed</span>;
   }
 
   return null;
@@ -55,12 +55,12 @@ export function EventsTable({ events, showIncident = false }: EventsTableProps) 
       <table className="w-full min-w-[720px] border-collapse text-[13px]">
         <thead>
           <tr>
-            <th className={headerCell}>Azonosító</th>
-            <th className={headerCell}>Időpont</th>
-            <th className={headerCell}>Forrás</th>
-            <th className={headerCell}>Esemény</th>
-            <th className={headerCell}>Súlyosság</th>
-            {showIncident && <th className={headerCell}>Incidens</th>}
+            <th className={headerCell}>ID</th>
+            <th className={headerCell}>Occurred</th>
+            <th className={headerCell}>Source</th>
+            <th className={headerCell}>Event</th>
+            <th className={headerCell}>Severity</th>
+            {showIncident && <th className={headerCell}>Incident</th>}
           </tr>
         </thead>
         <tbody>

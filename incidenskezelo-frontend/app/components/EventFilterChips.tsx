@@ -7,11 +7,11 @@ type EventFilterChipsProps = {
 };
 
 const filterLabels: Record<EventFilter, string> = {
-  all: "Mind",
-  bound: "Incidenshez kötve",
-  unbound: "Nincs incidenshez kötve",
-  duplicate: "Elvetett duplikátum",
-  failed: "Feldolgozási hiba",
+  all: "All",
+  bound: "Linked to incident",
+  unbound: "Not linked",
+  duplicate: "Discarded duplicate",
+  failed: "Processing failed",
 };
 
 export function EventFilterChips({ value, counts, onChange }: EventFilterChipsProps) {

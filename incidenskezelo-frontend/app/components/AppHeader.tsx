@@ -5,8 +5,8 @@ import { currentUser } from "~/data/currentUser";
 import { getInitials } from "~/lib/initials";
 
 const navItems = [
-  { to: "/incidents", label: "Incidensek" },
-  { to: "/events", label: "Események" },
+  { to: "/incidents", label: "Incidents" },
+  { to: "/events", label: "Events" },
 ];
 
 export function AppHeader() {
@@ -17,7 +17,7 @@ export function AppHeader() {
           I
         </div>
         <Text fw={600} className="text-nav-text-hi tracking-tight max-[680px]:hidden">
-          Incidenskezelő
+          Incident Manager
         </Text>
       </Group>
 
@@ -56,7 +56,7 @@ export function AppHeader() {
           </div>
         </Group>
         <Button variant="default" size="xs" className="border-nav-line bg-transparent text-nav-text hover:bg-nav-bg-2 hover:text-nav-text-hi">
-          Kilépés
+          Log out
         </Button>
       </Group>
     </header>

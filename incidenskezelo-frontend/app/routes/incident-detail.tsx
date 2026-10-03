@@ -12,7 +12,7 @@ export default function IncidentDetail({ params }: Route.ComponentProps) {
   if (!incident) {
     return (
       <Text size="sm" className="p-6 text-text-3">
-        Az incidens nem található.
+        Incident not found.
       </Text>
     );
   }
@@ -27,7 +27,7 @@ export default function IncidentDetail({ params }: Route.ComponentProps) {
 
       <Tabs key={incident.incidentId} defaultValue="overview" color="#0f717d" className="flex min-h-0 flex-1 flex-col">
         <Tabs.List className="mx-[22px] mt-[22px] max-[680px]:mx-4">
-          <Tabs.Tab value="overview">Áttekintés</Tabs.Tab>
+          <Tabs.Tab value="overview">Overview</Tabs.Tab>
           <Tabs.Tab
             value="events"
             rightSection={
@@ -36,7 +36,7 @@ export default function IncidentDetail({ params }: Route.ComponentProps) {
               </span>
             }
           >
-            Események
+            Events
           </Tabs.Tab>
         </Tabs.List>
 

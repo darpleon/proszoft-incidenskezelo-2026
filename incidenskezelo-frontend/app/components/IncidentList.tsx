@@ -23,10 +23,10 @@ export function IncidentList({ incidents }: IncidentListProps) {
     <section className="flex w-[312px] shrink-0 flex-col border-r border-list-line bg-list-bg max-[1280px]:w-[272px] max-[920px]:max-h-[42vh] max-[920px]:w-full max-[920px]:border-r-0 max-[920px]:border-b">
       <div className="flex items-center gap-[9px] px-4 pt-[13px] pb-[11px]">
         <Title order={2} className="text-sm font-semibold tracking-tight">
-          Incidensek
+          Incidents
         </Title>
         <Text size="xs" className="text-text-2">
-          {openCount} nyitott
+          {openCount} open
         </Text>
         <SegmentedControl
           ml="auto"
@@ -34,8 +34,8 @@ export function IncidentList({ incidents }: IncidentListProps) {
           value={ownerFilter}
           onChange={(value) => setOwnerFilter(value as OwnerFilter)}
           data={[
-            { value: "all", label: "Összes" },
-            { value: "mine", label: "Enyém" },
+            { value: "all", label: "All" },
+            { value: "mine", label: "Mine" },
           ]}
         />
       </div>
@@ -46,7 +46,7 @@ export function IncidentList({ incidents }: IncidentListProps) {
         ))}
         {visibleIncidents.length === 0 && (
           <Text size="sm" className="px-4 py-6 text-center text-text-3">
-            Nincs megjeleníthető incidens.
+            No incidents to show.
           </Text>
         )}
       </div>

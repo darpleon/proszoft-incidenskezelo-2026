@@ -34,19 +34,19 @@ export function IncidentDetailHeader({ incident, events }: IncidentDetailHeaderP
       </Title>
 
       <div className="mt-[22px] flex flex-wrap items-start gap-y-3">
-        <DetailField label="Állapot">
+        <DetailField label="Status">
           <StatusRing colorClass={statusTextColors[incident.status]} filled={incident.status !== "New"} />
           {statusLabels[incident.status]}
         </DetailField>
 
-        <DetailField label="Prioritás">
+        <DetailField label="Priority">
           <span className={`flex items-center gap-[7px] ${priorityTextColors[incident.priority]}`}>
             <StatusRing colorClass={priorityTextColors[incident.priority]} />
             {priorityLabels[incident.priority]}
           </span>
         </DetailField>
 
-        <DetailField label="Felelős">
+        <DetailField label="Assignee">
           {assignee ? (
             <>
               <i className="grid size-[21px] place-items-center rounded-full bg-petrol-bg text-[9px] font-bold text-petrol not-italic">
@@ -55,19 +55,19 @@ export function IncidentDetailHeader({ incident, events }: IncidentDetailHeaderP
               {assignee.name}
             </>
           ) : (
-            <span className="text-high">Nincs felelős</span>
+            <span className="text-high">Unassigned</span>
           )}
         </DetailField>
 
-        <DetailField label="Nyitva">
+        <DetailField label="Open for">
           <span className={isOpen(incident.status) ? "text-crit" : "font-medium text-text-2"} suppressHydrationWarning>
             {formatAge(incident.createdAtUtc)}
           </span>
         </DetailField>
 
-        <DetailField label="Események">
+        <DetailField label="Events">
           <span className="font-medium text-text-2">
-            {linkedCount} kapcsolt{duplicateCount > 0 && `, ${duplicateCount} elvetve`}
+            {linkedCount} linked{duplicateCount > 0 && `, ${duplicateCount} discarded`}
           </span>
         </DetailField>
       </div>

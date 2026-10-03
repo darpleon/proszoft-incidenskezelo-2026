@@ -9,7 +9,7 @@ import { matchesEventFilter } from "~/lib/events";
 import type { Route } from "./+types/events";
 
 export function meta({}: Route.MetaArgs) {
-  return [{ title: "Események | Incidenskezelő" }];
+  return [{ title: "Events | Incident Manager" }];
 }
 
 function matchesSearch(event: IEvent, search: string) {
@@ -40,7 +40,7 @@ export default function Events() {
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <div className="px-[22px] pt-[22px] max-[680px]:px-4">
         <Title order={1} className="text-2xl leading-tight font-semibold tracking-tight max-[680px]:text-xl">
-          Események
+          Events
         </Title>
       </div>
 
@@ -49,15 +49,15 @@ export default function Events() {
         <TextInput
           value={search}
           onChange={(event) => setSearch(event.currentTarget.value)}
-          placeholder="Keresés azonosító vagy forrás szerint"
-          aria-label="Keresés azonosító vagy forrás szerint"
+          placeholder="Search by ID or source"
+          aria-label="Search by ID or source"
           size="sm"
           className="ml-auto min-w-[200px] flex-[0_1_260px] max-[680px]:ml-0 max-[680px]:basis-full"
         />
       </div>
 
       <p className="px-[22px] pb-3 text-[11.5px] text-text-3 max-[680px]:px-4">
-        {counts.all} esemény, ebből {counts.unbound} nem tartozik incidenshez, {counts.failed} feldolgozása sikertelen volt
+        {counts.all} events, {counts.unbound} not linked to an incident, {counts.failed} failed to process
       </p>
 
       <div className="min-h-0 flex-1 overflow-auto px-[22px] pb-[22px] max-[920px]:overflow-visible max-[680px]:px-4">

@@ -4,7 +4,7 @@ import { incidents } from "~/data/incidents";
 import type { Route } from "./+types/incidents";
 
 export function meta({}: Route.MetaArgs) {
-  return [{ title: "Incidensek | Incidenskezelő" }];
+  return [{ title: "Incidents | Incident Manager" }];
 }
 
 export default function Incidents() {

@@ -2,18 +2,18 @@ import type { EventSeverity } from "~/interfaces/IEvent";
 import type { IncidentPriority, IncidentStatus } from "~/interfaces/IIncident";
 
 export const statusLabels: Record<IncidentStatus, string> = {
-  New: "Új",
-  Investigating: "Vizsgálat alatt",
-  InProgress: "Kezelés alatt",
-  Resolved: "Megoldott",
-  Closed: "Lezárt",
+  New: "New",
+  Investigating: "Investigating",
+  InProgress: "In progress",
+  Resolved: "Resolved",
+  Closed: "Closed",
 };
 
 export const priorityLabels: Record<IncidentPriority, string> = {
-  Low: "Alacsony",
-  Medium: "Közepes",
-  High: "Magas",
-  Critical: "Kritikus",
+  Low: "Low",
+  Medium: "Medium",
+  High: "High",
+  Critical: "Critical",
 };
 
 export const priorityColors: Record<IncidentPriority, string> = {
@@ -47,12 +47,12 @@ export const severityLabels: Record<EventSeverity, string> = priorityLabels;
 export const severityTextColors: Record<EventSeverity, string> = priorityTextColors;
 
 export const eventTypeLabels: Record<string, string> = {
-  DbConnectionError: "Adatbázis-kapcsolati hiba",
-  HighLatency: "Magas válaszidő",
-  ErrorRateIncrease: "Megnövekedett hibaarány",
-  JobFailed: "Sikertelen háttérfolyamat",
-  CapacityIssue: "Kapacitásprobléma",
-  ServiceRecovered: "Szolgáltatás helyreállása",
-  CertificateExpiring: "Tanúsítvány lejárati figyelmeztetés",
-  DependencyFailure: "Függő szolgáltatás hibája",
+  DbConnectionError: "Database connection error",
+  HighLatency: "High latency",
+  ErrorRateIncrease: "Increased error rate",
+  JobFailed: "Background job failed",
+  CapacityIssue: "Capacity issue",
+  ServiceRecovered: "Service recovered",
+  CertificateExpiring: "Certificate expiring",
+  DependencyFailure: "Dependency failure",
 };

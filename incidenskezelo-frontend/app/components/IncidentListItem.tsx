@@ -28,7 +28,7 @@ export function IncidentListItem({ incident }: IncidentListItemProps) {
       </span>
       <span className="flex items-center gap-[7px] text-[11.5px] text-text-2">
         {incident.assigneeUserId === null ? (
-          <span className="font-semibold text-high">Nincs felelős</span>
+          <span className="font-semibold text-high">Unassigned</span>
         ) : (
           <span>{statusLabels[incident.status]}</span>
         )}

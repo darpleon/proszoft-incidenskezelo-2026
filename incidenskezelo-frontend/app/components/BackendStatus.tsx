@@ -4,9 +4,9 @@ import api from "~/api/api";
 type ConnectionStatus = "checking" | "connected" | "failed";
 
 const statusLabel: Record<ConnectionStatus, string> = {
-  checking: "Kapcsolódás...",
-  connected: "Backend elérhető",
-  failed: "Backend nem elérhető",
+  checking: "Connecting...",
+  connected: "Backend available",
+  failed: "Backend unavailable",
 };
 
 const dotColor: Record<ConnectionStatus, string> = {

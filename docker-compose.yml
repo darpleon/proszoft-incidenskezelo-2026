@@ -18,6 +18,8 @@ services:
   migrations:
     # One-shot job: the backend image with its entrypoint overridden to run
     # the embedded migration bundle; exits 0 before the backend starts.
+    build:
+      context: ./incidenskezelo-backend/
     image: incidenskezelo-backend
     entrypoint: ["./migrate"]
     environment:
@@ -52,7 +54,11 @@ services:
     networks:
       - net
     depends_on:
-      - backend
+      backend:
+        condition: service_started
+        # nginx resolves `backend` once at startup: if the backend container is
+        # ever recreated (new IP), the frontend must be recreated with it.
+        restart: true
 
 networks:
   net:

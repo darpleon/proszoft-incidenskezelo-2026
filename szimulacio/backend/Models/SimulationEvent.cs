@@ -6,9 +6,9 @@ public class SimulationEvent
 
     public string ServiceCode { get; set; } = string.Empty;
 
-    public string EventType { get; set; } = string.Empty;
+    public EventType EventType { get; set; }
 
-    public string Severity { get; set; } = string.Empty;
+    public Severity Severity { get; set; }
 
     public DateTime OccurredAtUtc { get; set; }
 

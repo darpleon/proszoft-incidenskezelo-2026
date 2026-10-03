@@ -10,26 +10,52 @@ public class SimulatorService
     [
         new EventTemplate
         {
-            ServiceCode = "PAYMENT",
-            EventType = "Timeout",
-            Severity = "Critical",
+            ServiceCode = "payment-gw",
+            EventType = EventType.HighLatency,
+            Severity = Severity.Error,
             Summary = "Payment service timeout"
         },
 
         new EventTemplate
         {
-            ServiceCode = "PAYMENT",
-            EventType = "ConnectionError",
-            Severity = "Error",
+            ServiceCode = "payment-gw",
+            EventType = EventType.ServiceDown,
+            Severity = Severity.Critical,
             Summary = "Payment service connection error"
         },
 
         new EventTemplate
         {
-            ServiceCode = "AUTH",
-            EventType = "LoginFailure",
-            Severity = "Warning",
+            ServiceCode = "payment-gw",
+            EventType = EventType.ServiceRecovered,
+            Severity = Severity.Info,
+            Summary = "Payment gateway is available again"
+        },
+
+        new EventTemplate
+        {
+            ServiceCode = "web-portal",
+            EventType = EventType.HighErrorRate,
+            Severity = Severity.Warning,
             Summary = "Multiple login failures detected"
+        },
+
+        new EventTemplate
+        {
+            ServiceCode = "postgres-main",
+            EventType = EventType.DbConnectionError,
+            Severity = Severity.Critical,
+            Summary = "Connection pool exhausted",
+            Payload = new { poolSize = 20, waitingRequests = 47 }
+        },
+
+        new EventTemplate
+        {
+            ServiceCode = "orders-api",
+            EventType = EventType.HighLatency,
+            Severity = Severity.Warning,
+            Summary = "Response time above threshold",
+            Payload = new { p95Ms = 1800 }
         }
     ];
 

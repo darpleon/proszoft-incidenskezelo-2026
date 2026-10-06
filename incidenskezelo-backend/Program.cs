@@ -2,10 +2,12 @@ using incidenskezelo_backend.Data;
 using incidenskezelo_backend.Configuration;
 using incidenskezelo_backend.Services;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers().AddJsonOptions(options =>
+    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddOpenApi();
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is missing. Set the ConnectionStrings__DefaultConnection environment variable.");
@@ -26,6 +28,7 @@ builder.Services.Configure<GeminiOptions>(
     builder.Configuration.GetSection("Gemini"));
 
 builder.Services.AddHttpClient<IAiService, GeminiService>();
+builder.Services.AddScoped<IIncidentService, IncidentService>();
 
 var app = builder.Build();
 

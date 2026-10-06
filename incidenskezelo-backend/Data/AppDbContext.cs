@@ -12,6 +12,7 @@ namespace incidenskezelo_backend.Data
 
         public DbSet<User> Users => Set<User>();
 
+        public DbSet<Incident> Incidents => Set<Incident>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -49,7 +50,6 @@ namespace incidenskezelo_backend.Data
                 entity.HasIndex(evt => evt.SourceEventId).IsUnique();
                 entity.HasOne(evt => evt.Service).WithMany().HasForeignKey(evt => evt.ServiceId).OnDelete(DeleteBehavior.NoAction);
             });
-
             modelBuilder.Entity<User>(entity =>
             {
                 entity.ToTable("AppUser", table =>
@@ -61,12 +61,22 @@ namespace incidenskezelo_backend.Data
                 entity.Property(user => user.CreatedAtUtc).HasPrecision(3).HasConversion(AsUtc);
                 entity.HasIndex(user => user.Email).IsUnique();
             });
-        }
 
+            var incident = modelBuilder.Entity<Incident>();
+
+            incident.Property(i => i.Status)
+                .HasConversion<string>()
+                .HasMaxLength(20);
+            incident.Property(i => i.Priority)
+                .HasConversion<string>()
+                .HasMaxLength(10);
+
+            incident.Property(i => i.Title).HasMaxLength(200);
+            incident.Property(i => i.Description).HasMaxLength(4000);
+        }
 
         private static readonly ValueConverter<DateTime, DateTime> AsUtc =
             new(value => value, value => DateTime.SpecifyKind(value, DateTimeKind.Utc));
-
 
         private static string InList<TEnum>(string column) where TEnum : struct, Enum
         {

@@ -4,8 +4,9 @@ namespace incidenskezelo_backend.Services;
 
 public interface IIncidentService
 {
-    Task<List<Incident>> GetAllAsync(CancellationToken ct);
-    Task<Incident?> GetByIdAsync(int id, CancellationToken ct);
-    Task<Incident> CreateAsync(CreateIncidentRequest request, CancellationToken ct);
-    Task<Incident?> TransitionAsync(int id, IncidentStatus status, CancellationToken ct);
+    Task<List<IncidentResponse>> GetAllAsync(CancellationToken ct);
+    Task<IncidentResponse?> GetByIdAsync(int id, CancellationToken ct);
+    Task<IncidentResponse> CreateAsync(CreateIncidentRequest request, CancellationToken ct);
+    Task<IncidentResponse?> TransitionAsync(int id, IncidentStatus status, CancellationToken ct);
+    Task<List<IncidentStatusChangeResponse>?> GetHistoryAsync(int id, CancellationToken ct);
 }

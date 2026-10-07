@@ -9,27 +9,27 @@ namespace incidenskezelo_backend.Controllers;
 public class IncidentsController(IIncidentService incidentService) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<List<Incident>>> GetAll(CancellationToken ct)
+    public async Task<ActionResult<List<IncidentResponse>>> GetAll(CancellationToken ct)
     {
         return await incidentService.GetAllAsync(ct);
     }
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<Incident>> GetById(int id, CancellationToken ct)
+    public async Task<ActionResult<IncidentResponse>> GetById(int id, CancellationToken ct)
     {
         var incident = await incidentService.GetByIdAsync(id, ct);
         return incident is null ? NotFound() : incident;
     }
 
     [HttpPost]
-    public async Task<ActionResult<Incident>> Create(CreateIncidentRequest request, CancellationToken ct)
+    public async Task<ActionResult<IncidentResponse>> Create(CreateIncidentRequest request, CancellationToken ct)
     {
         var incident = await incidentService.CreateAsync(request, ct);
         return CreatedAtAction(nameof(GetById), new { id = incident.IncidentId }, incident);
     }
 
     [HttpPatch("{id:int}/status")]
-    public async Task<ActionResult<Incident>> Transition(int id, TransitionRequest request, CancellationToken ct)
+    public async Task<ActionResult<IncidentResponse>> Transition(int id, TransitionRequest request, CancellationToken ct)
     {
         try
         {
@@ -45,5 +45,12 @@ public class IncidentsController(IIncidentService incidentService) : ControllerB
                 Status = StatusCodes.Status409Conflict
             });
         }
+    }
+
+    [HttpGet("{id:int}/history")]
+    public async Task<ActionResult<List<IncidentStatusChangeResponse>>> GetHistory(int id, CancellationToken ct)
+    {
+        var history = await incidentService.GetHistoryAsync(id, ct);
+        return history is null ? NotFound() : history;
     }
 }

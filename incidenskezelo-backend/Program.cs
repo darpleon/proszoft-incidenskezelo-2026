@@ -42,6 +42,7 @@ builder.Services.Configure<GeminiOptions>(
 builder.Services.AddHttpClient<IAiService, GeminiService>();
 builder.Services.AddScoped<EventService>();
 builder.Services.AddScoped<IIncidentService, IncidentService>();
+
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddSingleton(TimeProvider.System);

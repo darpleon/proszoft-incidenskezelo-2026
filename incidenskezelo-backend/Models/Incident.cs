@@ -21,15 +21,19 @@ public class Incident
 {
     private Incident() { }
 
-    public static Incident Create(string title, string description, IncidentPriority priority)
+    public static Incident Create(string title, string description, IncidentPriority priority, ChangeContext context)
     {
-        return new Incident
+        var incident = new Incident
         {
             Title = title,
             Description = description,
             Priority = priority,
+            CreatedAtUtc = context.AtUtc,
             Status = IncidentStatus.Open
         };
+
+        incident.StatusHistory.Add(new IncidentStatusChange(incident, null, IncidentStatus.Open, context.AtUtc));
+        return incident;
     }
 
     public int IncidentId { get; private set; }
@@ -42,13 +46,18 @@ public class Incident
 
     public IncidentPriority Priority { get; set; } = IncidentPriority.Medium;
 
-    public void TransitionTo(IncidentStatus next)
+    public DateTime CreatedAtUtc { get; private set; }
+
+    public List<IncidentStatusChange> StatusHistory { get; private set; } = [];
+
+    public void TransitionTo(IncidentStatus next, ChangeContext context)
     {
         if (Status == IncidentStatus.Resolved || next != Status + 1)
         {
             throw new InvalidOperationException($"Invalid transition: {Status} -> {next}.");
         }
 
+        StatusHistory.Add(new IncidentStatusChange(this, Status, next, context.AtUtc));
         Status = next;
     }
 }

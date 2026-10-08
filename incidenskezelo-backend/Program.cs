@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using incidenskezelo_backend.Data;
 using incidenskezelo_backend.Configuration;
 using incidenskezelo_backend.Services;
@@ -5,7 +6,11 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+// Add services to the container.
+
+builder.Services.AddControllers()
+    .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false)));
+// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is missing. Set the ConnectionStrings__DefaultConnection environment variable.");
@@ -26,6 +31,7 @@ builder.Services.Configure<GeminiOptions>(
     builder.Configuration.GetSection("Gemini"));
 
 builder.Services.AddHttpClient<IAiService, GeminiService>();
+builder.Services.AddScoped<EventService>();
 
 var app = builder.Build();
 

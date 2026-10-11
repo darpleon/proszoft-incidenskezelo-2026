@@ -1,21 +1,6 @@
-namespace incidenskezelo_backend.Models;
+using incidenskezelo_backend.Models.Incident.Changes;
 
-public enum IncidentStatus
-{
-    Open,
-    Investigating,
-    InProgress,
-    Verifying,
-    Resolved
-}
-
-public enum IncidentPriority
-{
-    Low,
-    Medium,
-    High,
-    Critical
-}
+namespace incidenskezelo_backend.Models.Incident;
 
 public class Incident
 {

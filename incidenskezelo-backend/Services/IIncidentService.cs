@@ -1,4 +1,5 @@
-using incidenskezelo_backend.Models;
+using incidenskezelo_backend.Models.Incident;
+using incidenskezelo_backend.Models.Incident.Changes;
 
 namespace incidenskezelo_backend.Services;
 

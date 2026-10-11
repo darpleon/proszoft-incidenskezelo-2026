@@ -1,4 +1,5 @@
-using incidenskezelo_backend.Models;
+using incidenskezelo_backend.Models.Incident;
+using incidenskezelo_backend.Models.Incident.Changes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 

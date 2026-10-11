@@ -1,4 +1,6 @@
-namespace incidenskezelo_backend.Models;
+using incidenskezelo_backend.Models.Incident;
+
+namespace incidenskezelo_backend.Models.Incident.Changes;
 
 public class IncidentStatusChange
 {

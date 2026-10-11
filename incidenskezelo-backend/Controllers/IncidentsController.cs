@@ -1,4 +1,5 @@
-using incidenskezelo_backend.Models;
+using incidenskezelo_backend.Models.Incident;
+using incidenskezelo_backend.Models.Incident.Changes;
 using incidenskezelo_backend.Services;
 using Microsoft.AspNetCore.Mvc;
 

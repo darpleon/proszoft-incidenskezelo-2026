@@ -24,7 +24,7 @@ namespace incidenskezelo_backend.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("incidenskezelo_backend.Models.Incident", b =>
+            modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Incident", b =>
                 {
                     b.Property<int>("IncidentId")
                         .ValueGeneratedOnAdd()

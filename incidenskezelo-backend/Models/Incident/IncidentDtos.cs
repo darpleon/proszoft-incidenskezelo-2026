@@ -1,4 +1,6 @@
-namespace incidenskezelo_backend.Models;
+using incidenskezelo_backend.Models.Incident.Changes;
+
+namespace incidenskezelo_backend.Models.Incident;
 
 public record CreateIncidentRequest(string Title, string Description, IncidentPriority Priority);
 

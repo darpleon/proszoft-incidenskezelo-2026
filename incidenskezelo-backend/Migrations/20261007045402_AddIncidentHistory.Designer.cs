@@ -25,7 +25,7 @@ namespace incidenskezelo_backend.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("incidenskezelo_backend.Models.Incident", b =>
+            modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Incident", b =>
                 {
                     b.Property<int>("IncidentId")
                         .ValueGeneratedOnAdd()
@@ -61,7 +61,7 @@ namespace incidenskezelo_backend.Migrations
                     b.ToTable("Incidents");
                 });
 
-            modelBuilder.Entity("incidenskezelo_backend.Models.IncidentStatusChange", b =>
+            modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Changes.IncidentStatusChange", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -91,9 +91,9 @@ namespace incidenskezelo_backend.Migrations
                     b.ToTable("IncidentStatusChanges");
                 });
 
-            modelBuilder.Entity("incidenskezelo_backend.Models.IncidentStatusChange", b =>
+            modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Changes.IncidentStatusChange", b =>
                 {
-                    b.HasOne("incidenskezelo_backend.Models.Incident", "Incident")
+                    b.HasOne("incidenskezelo_backend.Models.Incident.Incident", "Incident")
                         .WithMany("StatusHistory")
                         .HasForeignKey("IncidentId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -102,7 +102,7 @@ namespace incidenskezelo_backend.Migrations
                     b.Navigation("Incident");
                 });
 
-            modelBuilder.Entity("incidenskezelo_backend.Models.Incident", b =>
+            modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Incident", b =>
                 {
                     b.Navigation("StatusHistory");
                 });

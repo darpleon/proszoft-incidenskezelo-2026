@@ -1,3 +1,4 @@
+using incidenskezelo_backend.Models;
 using incidenskezelo_backend.Models.Incident;
 using incidenskezelo_backend.Models.Incident.Changes;
 using Microsoft.EntityFrameworkCore;
@@ -74,8 +75,8 @@ namespace incidenskezelo_backend.Data
                 .HasConversion<string>()
                 .HasMaxLength(10);
 
-            incident.Property(i => i.Title).HasMaxLength(200);
-            incident.Property(i => i.Description).HasMaxLength(4000);
+            incident.Property(i => i.Title).HasMaxLength(IncidentLimits.TitleMaxLength);
+            incident.Property(i => i.Description).HasMaxLength(IncidentLimits.DescriptionMaxLength);
 
             incident.HasMany(i => i.StatusHistory)
                 .WithOne(c => c.Incident)

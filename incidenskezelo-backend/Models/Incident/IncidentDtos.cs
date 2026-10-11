@@ -13,13 +13,19 @@ public record IncidentResponse(
     IncidentStatus Status,
     IncidentPriority Priority,
     DateTime CreatedAtUtc,
-    DateTime UpdatedAtUtc)
+    DateTime UpdatedAtUtc,
+    DateTime? ClosedAtUtc)
 {
     public static IncidentResponse From(Incident incident)
     {
         var updatedAt = incident.StatusHistory.Count == 0
             ? incident.CreatedAtUtc
             : incident.StatusHistory.Max(c => c.OccurredAtUtc);
+
+        var closedAt = incident.StatusHistory
+            .Where(c => c.ToStatus == IncidentStatus.Resolved)
+            .Select(c => (DateTime?)c.OccurredAtUtc)
+            .FirstOrDefault();
 
         return new IncidentResponse(
             incident.IncidentId,
@@ -28,7 +34,8 @@ public record IncidentResponse(
             incident.Status,
             incident.Priority,
             incident.CreatedAtUtc,
-            updatedAt);
+            updatedAt,
+            closedAt);
     }
 }
 

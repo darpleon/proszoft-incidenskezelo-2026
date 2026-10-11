@@ -25,8 +25,49 @@ public class IncidentsController(IIncidentService incidentService) : ControllerB
     [HttpPost]
     public async Task<ActionResult<IncidentResponse>> Create(CreateIncidentRequest request, CancellationToken ct)
     {
+        var invalid = ValidateCreate(request);
+        if (invalid is not null)
+        {
+            return invalid;
+        }
+
         var incident = await incidentService.CreateAsync(request, ct);
         return CreatedAtAction(nameof(GetById), new { id = incident.IncidentId }, incident);
+    }
+
+    private ActionResult? ValidateCreate(CreateIncidentRequest request)
+    {
+        var errors = new List<string>();
+
+        if (string.IsNullOrWhiteSpace(request.Title))
+        {
+            errors.Add("Title is required.");
+        }
+        else if (request.Title.Length > IncidentLimits.TitleMaxLength)
+        {
+            errors.Add($"Title must be at most {IncidentLimits.TitleMaxLength} characters.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Description))
+        {
+            errors.Add("Description is required.");
+        }
+        else if (request.Description.Length > IncidentLimits.DescriptionMaxLength)
+        {
+            errors.Add($"Description must be at most {IncidentLimits.DescriptionMaxLength} characters.");
+        }
+
+        if (errors.Count == 0)
+        {
+            return null;
+        }
+
+        return BadRequest(new ProblemDetails
+        {
+            Title = "Invalid incident",
+            Detail = string.Join(" ", errors),
+            Status = StatusCodes.Status400BadRequest
+        });
     }
 
     [HttpPatch("{id:int}/status")]

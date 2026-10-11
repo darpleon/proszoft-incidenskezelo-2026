@@ -11,6 +11,7 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
     {
         return await context.Incidents.AsNoTracking()
             .OrderByDescending(i => i.CreatedAtUtc)
+            .Include(i => i.StatusHistory)
             .Select(i => ToResponse(i))
             .ToListAsync(ct);
     }
@@ -19,6 +20,7 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
     {
         return await context.Incidents.AsNoTracking()
             .Where(i => i.IncidentId == id)
+            .Include(i => i.StatusHistory)
             .Select(i => ToResponse(i))
             .FirstOrDefaultAsync(ct);
     }
@@ -80,6 +82,10 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
             i.Status,
             i.Priority,
             i.CreatedAtUtc,
-            i.StatusHistory.Max(c => (DateTime?)c.OccurredAtUtc) ?? i.CreatedAtUtc);
+            i.StatusHistory.Max(c => (DateTime?)c.OccurredAtUtc) ?? i.CreatedAtUtc,
+            i.StatusHistory
+                .Where(c => c.ToStatus == IncidentStatus.Resolved)
+                .Select(c => (DateTime?)c.OccurredAtUtc)
+                .FirstOrDefault());
     }
 }

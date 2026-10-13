@@ -52,14 +52,51 @@ public class GeminiService : IAiService
                 $"Gemini API error ({(int)response.StatusCode}): {responseBody}");
         }
 
-        /*using var json = JsonDocument.Parse(responseBody);
+        using var json = JsonDocument.Parse(responseBody);
 
-        var outputText = json.RootElement
-            .GetProperty("output_text")
-            .GetString();
+        if (!json.RootElement.TryGetProperty("steps", out var steps))
+        {
+            throw new InvalidOperationException(
+                "A Gemini válaszából hiányzik a steps mező.");
+        }
 
-        return outputText ?? string.Empty; */
+        var output = new System.Text.StringBuilder();
 
-        return responseBody;
+        foreach (var step in steps.EnumerateArray())
+        {
+            if (!step.TryGetProperty("type", out var typeElement) ||
+                typeElement.GetString() != "model_output")
+            {
+                continue;
+            }
+
+            if (!step.TryGetProperty("content", out var content))
+            {
+                continue;
+            }
+
+            foreach (var item in content.EnumerateArray())
+            {
+                if (item.TryGetProperty("type", out var itemType) &&
+                    itemType.GetString() == "text" &&
+                    item.TryGetProperty("text", out var textElement))
+                {
+                    output.AppendLine(textElement.GetString());
+                }
+            }
+        }
+
+        var result = output.ToString().Trim();
+
+        if (string.IsNullOrWhiteSpace(result))
+        {
+            throw new InvalidOperationException(
+                "A Gemini nem adott vissza szöveges választ.");
+        }
+
+        return result;
+
+
+        
     }
 }

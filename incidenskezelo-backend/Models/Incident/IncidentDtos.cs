@@ -6,6 +6,12 @@ public record CreateIncidentRequest(string Title, string Description, IncidentPr
 
 public record TransitionRequest(IncidentStatus Status);
 
+public record UpdateTitleRequest(string Title);
+
+public record UpdateDescriptionRequest(string Description);
+
+public record UpdatePriorityRequest(IncidentPriority Priority);
+
 public record IncidentResponse(
     int IncidentId,
     string Title,
@@ -18,10 +24,6 @@ public record IncidentResponse(
 {
     public static IncidentResponse From(Incident incident)
     {
-        var updatedAt = incident.StatusHistory.Count == 0
-            ? incident.Creation.OccurredAtUtc
-            : incident.StatusHistory.Max(c => c.OccurredAtUtc);
-
         var closedAt = incident.StatusHistory
             .Where(c => c.NewValue == IncidentStatus.Resolved)
             .Select(c => (DateTime?)c.OccurredAtUtc)
@@ -34,8 +36,18 @@ public record IncidentResponse(
             incident.Status,
             incident.Priority,
             incident.Creation.OccurredAtUtc,
-            updatedAt,
+            LatestChangeUtc(incident),
             closedAt);
+    }
+
+    private static DateTime LatestChangeUtc(Incident incident)
+    {
+        return incident.StatusHistory.Select(c => c.OccurredAtUtc)
+            .Concat(incident.TitleHistory.Select(c => c.OccurredAtUtc))
+            .Concat(incident.DescriptionHistory.Select(c => c.OccurredAtUtc))
+            .Concat(incident.PriorityHistory.Select(c => c.OccurredAtUtc))
+            .Append(incident.Creation.OccurredAtUtc)
+            .Max();
     }
 }
 

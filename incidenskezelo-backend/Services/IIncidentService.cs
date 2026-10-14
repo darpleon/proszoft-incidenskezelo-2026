@@ -9,5 +9,8 @@ public interface IIncidentService
     Task<IncidentResponse?> GetByIdAsync(int id, CancellationToken ct);
     Task<IncidentResponse> CreateAsync(CreateIncidentRequest request, CancellationToken ct);
     Task<IncidentResponse?> TransitionAsync(int id, IncidentStatus status, CancellationToken ct);
+    Task<IncidentResponse?> UpdateTitleAsync(int id, string title, CancellationToken ct);
+    Task<IncidentResponse?> UpdateDescriptionAsync(int id, string description, CancellationToken ct);
+    Task<IncidentResponse?> UpdatePriorityAsync(int id, IncidentPriority priority, CancellationToken ct);
     Task<List<IncidentStatusChangeResponse>?> GetHistoryAsync(int id, CancellationToken ct);
 }

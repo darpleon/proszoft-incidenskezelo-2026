@@ -10,10 +10,13 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
     public async Task<List<IncidentResponse>> GetAllAsync(CancellationToken ct)
     {
         return await context.Incidents.AsNoTracking()
-            .OrderByDescending(i => i.Creation.OccurredAtUtc)
-            .Include(i => i.StatusHistory)
             .Include(i => i.Creation)
-            .Select(i => ToResponse(i))
+            .Include(i => i.StatusHistory)
+            .Include(i => i.TitleHistory)
+            .Include(i => i.DescriptionHistory)
+            .Include(i => i.PriorityHistory)
+            .OrderByDescending(i => i.Creation.OccurredAtUtc)
+            .Select(i => IncidentResponse.From(i))
             .ToListAsync(ct);
     }
 
@@ -21,9 +24,12 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
     {
         return await context.Incidents.AsNoTracking()
             .Where(i => i.IncidentId == id)
-            .Include(i => i.StatusHistory)
             .Include(i => i.Creation)
-            .Select(i => ToResponse(i))
+            .Include(i => i.StatusHistory)
+            .Include(i => i.TitleHistory)
+            .Include(i => i.DescriptionHistory)
+            .Include(i => i.PriorityHistory)
+            .Select(i => IncidentResponse.From(i))
             .FirstOrDefaultAsync(ct);
     }
 
@@ -40,21 +46,58 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
 
     public async Task<IncidentResponse?> TransitionAsync(int id, IncidentStatus status, CancellationToken ct)
     {
-        var incident = await context.Incidents
-            .Include(i => i.StatusHistory)
-            .Include(i => i.Creation)
-            .FirstOrDefaultAsync(i => i.IncidentId == id, ct);
+        var incident = await LoadWithHistoryAsync(id, ct);
 
         if (incident is null)
         {
             return null;
         }
 
-        var changeContext = new ChangeContext(timeProvider.GetUtcNow().UtcDateTime);
-        incident.TransitionTo(status, changeContext);
+        incident.TransitionTo(status, new ChangeContext(timeProvider.GetUtcNow().UtcDateTime));
         await context.SaveChangesAsync(ct);
 
         return IncidentResponse.From(incident);
+    }
+
+    public Task<IncidentResponse?> UpdateTitleAsync(int id, string title, CancellationToken ct)
+    {
+        return ApplyAsync(id, (incident, context) => incident.UpdateTitle(title, context), ct);
+    }
+
+    public Task<IncidentResponse?> UpdateDescriptionAsync(int id, string description, CancellationToken ct)
+    {
+        return ApplyAsync(id, (incident, context) => incident.UpdateDescription(description, context), ct);
+    }
+
+    public Task<IncidentResponse?> UpdatePriorityAsync(int id, IncidentPriority priority, CancellationToken ct)
+    {
+        return ApplyAsync(id, (incident, context) => incident.UpdatePriority(priority, context), ct);
+    }
+
+    private async Task<IncidentResponse?> ApplyAsync(int id, Action<Incident, ChangeContext> update, CancellationToken ct)
+    {
+        var incident = await LoadWithHistoryAsync(id, ct);
+
+        if (incident is null)
+        {
+            return null;
+        }
+
+        update(incident, new ChangeContext(timeProvider.GetUtcNow().UtcDateTime));
+        await context.SaveChangesAsync(ct);
+
+        return IncidentResponse.From(incident);
+    }
+
+    private Task<Incident?> LoadWithHistoryAsync(int id, CancellationToken ct)
+    {
+        return context.Incidents
+            .Include(i => i.Creation)
+            .Include(i => i.StatusHistory)
+            .Include(i => i.TitleHistory)
+            .Include(i => i.DescriptionHistory)
+            .Include(i => i.PriorityHistory)
+            .FirstOrDefaultAsync(i => i.IncidentId == id, ct);
     }
 
     public async Task<List<IncidentStatusChangeResponse>?> GetHistoryAsync(int id, CancellationToken ct)
@@ -76,19 +119,4 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
             .ToListAsync(ct);
     }
 
-    private static IncidentResponse ToResponse(Incident i)
-    {
-        return new IncidentResponse(
-            i.IncidentId,
-            i.Title,
-            i.Description,
-            i.Status,
-            i.Priority,
-            i.Creation.OccurredAtUtc,
-            i.StatusHistory.Max(c => (DateTime?)c.OccurredAtUtc) ?? i.Creation.OccurredAtUtc,
-            i.StatusHistory
-                .Where(c => c.NewValue == IncidentStatus.Resolved)
-                .Select(c => (DateTime?)c.OccurredAtUtc)
-                .FirstOrDefault());
-    }
 }

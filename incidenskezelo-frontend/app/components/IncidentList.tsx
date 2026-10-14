@@ -1,7 +1,7 @@
 import { SegmentedControl, Text, Title } from "@mantine/core";
 import { useState } from "react";
 import { IncidentListItem } from "./IncidentListItem";
-import { currentUser } from "~/data/currentUser";
+import useAuth from "~/hooks/useAuth";
 import type { IIncident } from "~/interfaces/IIncident";
 import { isOpen } from "~/lib/labels";
 
@@ -13,9 +13,10 @@ type OwnerFilter = "all" | "mine";
 
 export function IncidentList({ incidents }: IncidentListProps) {
   const [ownerFilter, setOwnerFilter] = useState<OwnerFilter>("all");
+  const { user } = useAuth();
 
   const visibleIncidents = incidents
-    .filter((incident) => ownerFilter === "all" || incident.assigneeUserId === currentUser.userId)
+    .filter((incident) => ownerFilter === "all" || incident.assigneeUserId === user?.userId)
     .sort((a, b) => b.createdAtUtc.localeCompare(a.createdAtUtc));
   const openCount = visibleIncidents.filter((incident) => isOpen(incident.status)).length;
 

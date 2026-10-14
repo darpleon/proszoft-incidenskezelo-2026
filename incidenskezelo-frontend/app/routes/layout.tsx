@@ -1,5 +1,13 @@
-import { Outlet } from "react-router";
+import { Outlet, redirect } from "react-router";
 import { AppHeader } from "~/components/AppHeader";
+import { readAuthUser } from "~/lib/authToken";
+
+export function clientLoader() {
+  if (!readAuthUser()) {
+    throw redirect("/login");
+  }
+  return null;
+}
 
 export default function AppLayout() {
   return (

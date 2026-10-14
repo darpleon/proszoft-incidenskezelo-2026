@@ -107,7 +107,7 @@ public class IncidentsController(IIncidentService incidentService) : ControllerB
     }
 
     [HttpGet("{id:int}/history")]
-    public async Task<ActionResult<List<IncidentStatusChangeResponse>>> GetHistory(int id, CancellationToken ct)
+    public async Task<ActionResult<List<IncidentChangeResponse>>> GetHistory(int id, CancellationToken ct)
     {
         var history = await incidentService.GetHistoryAsync(id, ct);
         return history is null ? NotFound() : history;

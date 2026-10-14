@@ -100,7 +100,7 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
             .FirstOrDefaultAsync(i => i.IncidentId == id, ct);
     }
 
-    public async Task<List<IncidentStatusChangeResponse>?> GetHistoryAsync(int id, CancellationToken ct)
+    public async Task<List<IncidentChangeResponse>?> GetHistoryAsync(int id, CancellationToken ct)
     {
         var exists = await context.Incidents.AsNoTracking()
             .AnyAsync(i => i.IncidentId == id, ct);
@@ -110,13 +110,35 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
             return null;
         }
 
-        return await context.IncidentStatusChanges.AsNoTracking()
+        var created = await context.IncidentCreations.AsNoTracking()
             .Where(c => c.IncidentId == id)
-            .OrderBy(c => c.OccurredAtUtc)
-            .ThenBy(c => c.Id)
-            .Select(c => new IncidentStatusChangeResponse(
-                c.Id, c.IncidentId, c.OldValue, c.NewValue, c.OccurredAtUtc))
+            .Select(c => new IncidentChangeResponse("created", c.Id, c.OccurredAtUtc, null, null))
             .ToListAsync(ct);
+
+        var status = await MapKindAsync(context.IncidentStatusChanges.AsNoTracking().Where(c => c.IncidentId == id), "status", ct);
+        var title = await MapKindAsync(context.IncidentTitleChanges.AsNoTracking().Where(c => c.IncidentId == id), "title", ct);
+        var description = await MapKindAsync(context.IncidentDescriptionChanges.AsNoTracking().Where(c => c.IncidentId == id), "description", ct);
+        var priority = await MapKindAsync(context.IncidentPriorityChanges.AsNoTracking().Where(c => c.IncidentId == id), "priority", ct);
+
+        return created
+            .Concat(status)
+            .Concat(title)
+            .Concat(description)
+            .Concat(priority)
+            .OrderBy(e => e.OccurredAtUtc)
+            .ThenBy(e => e.Id)
+            .ToList();
     }
 
+    private static async Task<List<IncidentChangeResponse>> MapKindAsync<T>(
+        IQueryable<IncidentChange<T>> changes, string kind, CancellationToken ct)
+    {
+        var rows = await changes
+            .Select(c => new { c.Id, c.OccurredAtUtc, c.OldValue, c.NewValue })
+            .ToListAsync(ct);
+
+        return rows
+            .Select(r => new IncidentChangeResponse(kind, r.Id, r.OccurredAtUtc, r.OldValue?.ToString(), r.NewValue?.ToString()))
+            .ToList();
+    }
 }

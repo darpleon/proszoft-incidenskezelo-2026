@@ -42,29 +42,24 @@ public record IncidentResponse(
 
     private static DateTime LatestChangeUtc(Incident incident)
     {
-        return incident.StatusHistory.Select(c => c.OccurredAtUtc)
-            .Concat(incident.TitleHistory.Select(c => c.OccurredAtUtc))
-            .Concat(incident.DescriptionHistory.Select(c => c.OccurredAtUtc))
-            .Concat(incident.PriorityHistory.Select(c => c.OccurredAtUtc))
+        IEnumerable<IncidentChange>[] streams =
+        [
+            incident.StatusHistory,
+            incident.TitleHistory,
+            incident.DescriptionHistory,
+            incident.PriorityHistory
+        ];
+
+        return streams.SelectMany(s => s)
+            .Select(c => c.OccurredAtUtc)
             .Append(incident.Creation.OccurredAtUtc)
             .Max();
     }
 }
 
-public record IncidentStatusChangeResponse(
+public record IncidentChangeResponse(
+    string Kind,
     int Id,
-    int IncidentId,
-    IncidentStatus? FromStatus,
-    IncidentStatus ToStatus,
-    DateTime OccurredAtUtc)
-{
-    public static IncidentStatusChangeResponse From(IncidentStatusChange change)
-    {
-        return new IncidentStatusChangeResponse(
-            change.Id,
-            change.IncidentId,
-            change.OldValue,
-            change.NewValue,
-            change.OccurredAtUtc);
-    }
-}
+    DateTime OccurredAtUtc,
+    string? OldValue,
+    string? NewValue);

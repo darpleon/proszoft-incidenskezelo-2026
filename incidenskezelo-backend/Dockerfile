@@ -11,6 +11,7 @@ RUN dotnet tool restore --tool-manifest dotnet-tools.json
 # Inert build-time placeholder: EF needs a connection string to build the
 # design-time host; the real one comes from the environment when the bundle runs.
 RUN ConnectionStrings__DefaultConnection="Server=placeholder" \
+    Jwt__Key="build-time-placeholder-key-not-used-at-runtime" \
     dotnet ef migrations bundle --project incidenskezelo-backend.csproj --configuration Release -o /app/migrate
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS backend

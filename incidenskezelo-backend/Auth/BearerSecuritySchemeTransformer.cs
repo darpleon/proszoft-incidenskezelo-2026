@@ -1,9 +1,10 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
 
 namespace incidenskezelo_backend.Auth;
 
-public class BearerSecuritySchemeTransformer : IOpenApiDocumentTransformer
+public class BearerSecuritySchemeTransformer : IOpenApiDocumentTransformer, IOpenApiOperationTransformer
 {
     private const string SchemeName = "Bearer";
 
@@ -20,7 +21,18 @@ public class BearerSecuritySchemeTransformer : IOpenApiDocumentTransformer
             Description = "Paste the token from POST /api/users/login.",
         };
 
-        document.Security = [new OpenApiSecurityRequirement { [new OpenApiSecuritySchemeReference(SchemeName, document)] = [] }];
+        return Task.CompletedTask;
+    }
+
+
+    public Task TransformAsync(OpenApiOperation operation, OpenApiOperationTransformerContext context, CancellationToken cancellationToken)
+    {
+        var allowsAnonymous = context.Description.ActionDescriptor.EndpointMetadata.OfType<IAllowAnonymous>().Any();
+
+        if (!allowsAnonymous)
+        {
+            operation.Security = [new OpenApiSecurityRequirement { [new OpenApiSecuritySchemeReference(SchemeName, context.Document)] = [] }];
+        }
 
         return Task.CompletedTask;
     }

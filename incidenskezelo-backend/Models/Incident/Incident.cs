@@ -1,9 +1,19 @@
+using System.Collections.Frozen;
 using incidenskezelo_backend.Models.Incident.Changes;
 
 namespace incidenskezelo_backend.Models.Incident;
 
 public class Incident
 {
+    private static readonly FrozenDictionary<IncidentStatus, IncidentStatus> NextStatus =
+        new Dictionary<IncidentStatus, IncidentStatus>
+        {
+            [IncidentStatus.Open] = IncidentStatus.Investigating,
+            [IncidentStatus.Investigating] = IncidentStatus.InProgress,
+            [IncidentStatus.InProgress] = IncidentStatus.Verifying,
+            [IncidentStatus.Verifying] = IncidentStatus.Resolved
+        }.ToFrozenDictionary();
+
     private Incident() { }
 
     public static Incident Create(string title, string description, IncidentPriority priority, ChangeContext context)
@@ -37,7 +47,7 @@ public class Incident
 
     public void TransitionTo(IncidentStatus next, ChangeContext context)
     {
-        if (Status == IncidentStatus.Resolved || next != Status + 1)
+        if (!NextStatus.TryGetValue(Status, out var allowed) || next != allowed)
         {
             throw new InvalidOperationException($"Invalid transition: {Status} -> {next}.");
         }

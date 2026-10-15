@@ -24,10 +24,9 @@ public record IncidentResponse(
 {
     public static IncidentResponse From(Incident incident)
     {
-        var closedAt = incident.StatusHistory
-            .Where(c => c.NewValue == IncidentStatus.Resolved)
-            .Select(c => (DateTime?)c.OccurredAtUtc)
-            .FirstOrDefault();
+        DateTime? closedAt = incident.Status == IncidentStatus.Resolved
+            ? incident.StatusHistory.Last(c => c.NewValue == IncidentStatus.Resolved).OccurredAtUtc
+            : null;
 
         return new IncidentResponse(
             incident.IncidentId,

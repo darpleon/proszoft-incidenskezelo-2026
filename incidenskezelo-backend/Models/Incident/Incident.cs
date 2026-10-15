@@ -5,13 +5,14 @@ namespace incidenskezelo_backend.Models.Incident;
 
 public class Incident
 {
-    private static readonly FrozenDictionary<IncidentStatus, IncidentStatus> NextStatus =
-        new Dictionary<IncidentStatus, IncidentStatus>
+    private static readonly FrozenDictionary<IncidentStatus, FrozenSet<IncidentStatus>> AllowedTransitions =
+        new Dictionary<IncidentStatus, FrozenSet<IncidentStatus>>
         {
-            [IncidentStatus.Open] = IncidentStatus.Investigating,
-            [IncidentStatus.Investigating] = IncidentStatus.InProgress,
-            [IncidentStatus.InProgress] = IncidentStatus.Verifying,
-            [IncidentStatus.Verifying] = IncidentStatus.Resolved
+            [IncidentStatus.Open] = new[] { IncidentStatus.Investigating }.ToFrozenSet(),
+            [IncidentStatus.Investigating] = new[] { IncidentStatus.InProgress }.ToFrozenSet(),
+            [IncidentStatus.InProgress] = new[] { IncidentStatus.Verifying }.ToFrozenSet(),
+            [IncidentStatus.Verifying] = new[] { IncidentStatus.Resolved, IncidentStatus.InProgress }.ToFrozenSet(),
+            [IncidentStatus.Resolved] = new[] { IncidentStatus.InProgress }.ToFrozenSet()
         }.ToFrozenDictionary();
 
     private Incident() { }
@@ -88,7 +89,7 @@ public class Incident
 
     public void TransitionTo(IncidentStatus next, ChangeContext context)
     {
-        if (!NextStatus.TryGetValue(Status, out var allowed) || next != allowed)
+        if (!AllowedTransitions.TryGetValue(Status, out var allowed) || !allowed.Contains(next))
         {
             throw new InvalidOperationException($"Invalid transition: {Status} -> {next}.");
         }

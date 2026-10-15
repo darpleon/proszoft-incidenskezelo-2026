@@ -51,8 +51,8 @@ namespace incidenskezelo_backend.Migrations
 
                     b.Property<string>("Severity")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("SourceEventId")
                         .IsRequired()
@@ -80,6 +80,90 @@ namespace incidenskezelo_backend.Migrations
                         });
                 });
 
+            modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Changes.IncidentCreation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("IncidentId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IncidentId")
+                        .IsUnique();
+
+                    b.ToTable("IncidentCreations");
+                });
+
+            modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Changes.IncidentDescriptionChange", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("IncidentId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("NewValue")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("OldValue")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IncidentId", "OccurredAtUtc");
+
+                    b.ToTable("IncidentDescriptionChanges");
+                });
+
+            modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Changes.IncidentPriorityChange", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("IncidentId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("NewValue")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("OldValue")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IncidentId", "OccurredAtUtc");
+
+                    b.ToTable("IncidentPriorityChanges");
+                });
+
             modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Changes.IncidentStatusChange", b =>
                 {
                     b.Property<int>("Id")
@@ -88,26 +172,58 @@ namespace incidenskezelo_backend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("FromStatus")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
                     b.Property<int>("IncidentId")
                         .HasColumnType("int");
+
+                    b.Property<string>("NewValue")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime>("OccurredAtUtc")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("ToStatus")
+                    b.Property<string>("OldValue")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("IncidentId", "OccurredAtUtc");
 
                     b.ToTable("IncidentStatusChanges");
+                });
+
+            modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Changes.IncidentTitleChange", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("IncidentId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("NewValue")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("OldValue")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IncidentId", "OccurredAtUtc");
+
+                    b.ToTable("IncidentTitleChanges");
                 });
 
             modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Incident", b =>
@@ -118,9 +234,6 @@ namespace incidenskezelo_backend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IncidentId"));
 
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("datetime2");
-
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(4000)
@@ -128,13 +241,13 @@ namespace incidenskezelo_backend.Migrations
 
                     b.Property<string>("Priority")
                         .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -164,8 +277,8 @@ namespace incidenskezelo_backend.Migrations
 
                     b.Property<string>("Kind")
                         .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -290,6 +403,39 @@ namespace incidenskezelo_backend.Migrations
                     b.Navigation("Service");
                 });
 
+            modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Changes.IncidentCreation", b =>
+                {
+                    b.HasOne("incidenskezelo_backend.Models.Incident.Incident", "Incident")
+                        .WithOne("Creation")
+                        .HasForeignKey("incidenskezelo_backend.Models.Incident.Changes.IncidentCreation", "IncidentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Incident");
+                });
+
+            modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Changes.IncidentDescriptionChange", b =>
+                {
+                    b.HasOne("incidenskezelo_backend.Models.Incident.Incident", "Incident")
+                        .WithMany("DescriptionHistory")
+                        .HasForeignKey("IncidentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Incident");
+                });
+
+            modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Changes.IncidentPriorityChange", b =>
+                {
+                    b.HasOne("incidenskezelo_backend.Models.Incident.Incident", "Incident")
+                        .WithMany("PriorityHistory")
+                        .HasForeignKey("IncidentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Incident");
+                });
+
             modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Changes.IncidentStatusChange", b =>
                 {
                     b.HasOne("incidenskezelo_backend.Models.Incident.Incident", "Incident")
@@ -301,9 +447,29 @@ namespace incidenskezelo_backend.Migrations
                     b.Navigation("Incident");
                 });
 
+            modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Changes.IncidentTitleChange", b =>
+                {
+                    b.HasOne("incidenskezelo_backend.Models.Incident.Incident", "Incident")
+                        .WithMany("TitleHistory")
+                        .HasForeignKey("IncidentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Incident");
+                });
+
             modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Incident", b =>
                 {
+                    b.Navigation("Creation")
+                        .IsRequired();
+
+                    b.Navigation("DescriptionHistory");
+
+                    b.Navigation("PriorityHistory");
+
                     b.Navigation("StatusHistory");
+
+                    b.Navigation("TitleHistory");
                 });
 #pragma warning restore 612, 618
         }

@@ -2,6 +2,7 @@ using incidenskezelo_backend.Models;
 using incidenskezelo_backend.Models.Incident;
 using incidenskezelo_backend.Models.Incident.Changes;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace incidenskezelo_backend.Data
@@ -26,6 +27,19 @@ namespace incidenskezelo_backend.Data
 
         public DbSet<IncidentPriorityChange> IncidentPriorityChanges => Set<IncidentPriorityChange>();
 
+        protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+        {
+            configurationBuilder.Properties<Enum>()
+                .HaveConversion<string>()
+                .HaveMaxLength(50);
+
+            configurationBuilder.Properties<DateTime>()
+                .HaveConversion(typeof(AsUtcConverter));
+
+            configurationBuilder.Properties<DateTime>()
+                .HaveConversion(typeof(AsUtcConverter));
+        }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Service>(entity =>
@@ -34,7 +48,6 @@ namespace incidenskezelo_backend.Data
                     table.HasCheckConstraint("CK_Service_Kind", InList<ServiceKind>("Kind")));
                 entity.Property(service => service.Code).HasMaxLength(50);
                 entity.Property(service => service.Name).HasMaxLength(100);
-                entity.Property(service => service.Kind).HasConversion<string>().HasMaxLength(20);
                 entity.HasIndex(service => service.Code).IsUnique();
                 entity.HasData(
                     new Service { ServiceId = 1, Code = "postgres-main", Name = "Main database", Kind = ServiceKind.Database },
@@ -54,11 +67,9 @@ namespace incidenskezelo_backend.Data
                     table.HasCheckConstraint("CK_Event_PayloadJson", "[PayloadJson] IS NULL OR ISJSON([PayloadJson]) = 1");
                 });
                 entity.Property(evt => evt.SourceEventId).HasMaxLength(100);
-                entity.Property(evt => evt.EventType).HasConversion<string>().HasMaxLength(50);
-                entity.Property(evt => evt.Severity).HasConversion<string>().HasMaxLength(20);
                 entity.Property(evt => evt.Summary).HasMaxLength(500);
-                entity.Property(evt => evt.OccurredAtUtc).HasPrecision(3).HasConversion(AsUtc);
-                entity.Property(evt => evt.ReceivedAtUtc).HasPrecision(3).HasConversion(AsUtc);
+                entity.Property(evt => evt.OccurredAtUtc).HasPrecision(3);
+                entity.Property(evt => evt.ReceivedAtUtc).HasPrecision(3);
                 entity.HasIndex(evt => evt.SourceEventId).IsUnique();
                 entity.HasOne(evt => evt.Service).WithMany().HasForeignKey(evt => evt.ServiceId).OnDelete(DeleteBehavior.NoAction);
             });
@@ -70,18 +81,11 @@ namespace incidenskezelo_backend.Data
                 entity.Property(user => user.Email).HasMaxLength(UserLimits.EmailMaxLength);
                 entity.Property(user => user.PasswordHash).HasMaxLength(100);
                 entity.Property(user => user.Role).HasConversion<string>().HasMaxLength(20);
-                entity.Property(user => user.CreatedAtUtc).HasPrecision(3).HasConversion(AsUtc);
+                entity.Property(user => user.CreatedAtUtc).HasPrecision(3);
                 entity.HasIndex(user => user.Email).IsUnique();
             });
 
             var incident = modelBuilder.Entity<Incident>();
-
-            incident.Property(i => i.Status)
-                .HasConversion<string>()
-                .HasMaxLength(20);
-            incident.Property(i => i.Priority)
-                .HasConversion<string>()
-                .HasMaxLength(10);
 
             incident.Property(i => i.Title).HasMaxLength(IncidentLimits.TitleMaxLength);
             incident.Property(i => i.Description).HasMaxLength(IncidentLimits.DescriptionMaxLength);
@@ -97,13 +101,6 @@ namespace incidenskezelo_backend.Data
                 .OnDelete(DeleteBehavior.Cascade);
 
             var statusChange = modelBuilder.Entity<IncidentStatusChange>();
-
-            statusChange.Property(c => c.OldValue)
-                .HasConversion<string>()
-                .HasMaxLength(20);
-            statusChange.Property(c => c.NewValue)
-                .HasConversion<string>()
-                .HasMaxLength(20);
 
             statusChange.HasIndex(c => new { c.IncidentId, c.OccurredAtUtc });
 
@@ -136,21 +133,25 @@ namespace incidenskezelo_backend.Data
 
             var priorityChange = modelBuilder.Entity<IncidentPriorityChange>();
 
-            priorityChange.Property(c => c.OldValue)
-                .HasConversion<string>()
-                .HasMaxLength(10);
-            priorityChange.Property(c => c.NewValue)
-                .HasConversion<string>()
-                .HasMaxLength(10);
             priorityChange.HasIndex(c => new { c.IncidentId, c.OccurredAtUtc });
         }
 
-        private static readonly ValueConverter<DateTime, DateTime> AsUtc =
-            new(value => value, value => DateTime.SpecifyKind(value, DateTimeKind.Utc));
+        private sealed class AsUtcConverter() : ValueConverter<DateTime, DateTime>(
+            value => value, value => DateTime.SpecifyKind(value, DateTimeKind.Utc));
 
         private static string InList<TEnum>(string column) where TEnum : struct, Enum
         {
-            return $"[{column}] IN ({string.Join(", ", Enum.GetNames<TEnum>().Select(name => $"'{name}'"))})";
+            var names = Enum.GetNames<TEnum>();
+            var violating = names.Where(name => name.Length > 50).ToList();
+
+            if (violating.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    $"{typeof(TEnum).Name} member names exceed the nvarchar(50) model convention ceiling: " +
+                    $"{string.Join(", ", violating)}");
+            }
+
+            return $"[{column}] IN ({string.Join(", ", names.Select(name => $"'{name}'"))})";
         }
     }
 }

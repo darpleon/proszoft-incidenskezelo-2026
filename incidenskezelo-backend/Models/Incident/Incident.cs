@@ -23,11 +23,10 @@ public class Incident
             Title = title,
             Description = description,
             Priority = priority,
-            CreatedAtUtc = context.AtUtc,
             Status = IncidentStatus.Open
         };
 
-        incident.StatusHistory.Add(new IncidentStatusChange(incident, null, IncidentStatus.Open, context.AtUtc));
+        incident.Creation = new IncidentCreation(incident, context.AtUtc);
         return incident;
     }
 
@@ -39,11 +38,53 @@ public class Incident
 
     public IncidentStatus Status { get; private set; }
 
-    public IncidentPriority Priority { get; set; } = IncidentPriority.Medium;
+    public IncidentPriority Priority { get; private set; } = IncidentPriority.Medium;
 
-    public DateTime CreatedAtUtc { get; private set; }
+    public IncidentCreation Creation { get; private set; } = null!;
 
     public List<IncidentStatusChange> StatusHistory { get; private set; } = [];
+
+    public List<IncidentTitleChange> TitleHistory { get; private set; } = [];
+
+    public List<IncidentDescriptionChange> DescriptionHistory { get; private set; } = [];
+
+    public List<IncidentPriorityChange> PriorityHistory { get; private set; } = [];
+
+    public bool UpdateTitle(string newTitle, ChangeContext context)
+    {
+        if (Title == newTitle)
+        {
+            return false;
+        }
+
+        TitleHistory.Add(new IncidentTitleChange(this, Title, newTitle, context.AtUtc));
+        Title = newTitle;
+        return true;
+    }
+
+    public bool UpdateDescription(string newDescription, ChangeContext context)
+    {
+        if (Description == newDescription)
+        {
+            return false;
+        }
+
+        DescriptionHistory.Add(new IncidentDescriptionChange(this, Description, newDescription, context.AtUtc));
+        Description = newDescription;
+        return true;
+    }
+
+    public bool UpdatePriority(IncidentPriority newPriority, ChangeContext context)
+    {
+        if (Priority == newPriority)
+        {
+            return false;
+        }
+
+        PriorityHistory.Add(new IncidentPriorityChange(this, Priority, newPriority, context.AtUtc));
+        Priority = newPriority;
+        return true;
+    }
 
     public void TransitionTo(IncidentStatus next, ChangeContext context)
     {

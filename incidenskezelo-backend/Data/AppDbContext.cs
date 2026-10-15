@@ -16,7 +16,15 @@ namespace incidenskezelo_backend.Data
 
         public DbSet<Incident> Incidents => Set<Incident>();
 
+        public DbSet<IncidentCreation> IncidentCreations => Set<IncidentCreation>();
+
         public DbSet<IncidentStatusChange> IncidentStatusChanges => Set<IncidentStatusChange>();
+
+        public DbSet<IncidentTitleChange> IncidentTitleChanges => Set<IncidentTitleChange>();
+
+        public DbSet<IncidentDescriptionChange> IncidentDescriptionChanges => Set<IncidentDescriptionChange>();
+
+        public DbSet<IncidentPriorityChange> IncidentPriorityChanges => Set<IncidentPriorityChange>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -78,6 +86,11 @@ namespace incidenskezelo_backend.Data
             incident.Property(i => i.Title).HasMaxLength(IncidentLimits.TitleMaxLength);
             incident.Property(i => i.Description).HasMaxLength(IncidentLimits.DescriptionMaxLength);
 
+            incident.HasOne(i => i.Creation)
+                .WithOne(c => c.Incident)
+                .HasForeignKey<IncidentCreation>(c => c.IncidentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             incident.HasMany(i => i.StatusHistory)
                 .WithOne(c => c.Incident)
                 .HasForeignKey(c => c.IncidentId)
@@ -85,14 +98,51 @@ namespace incidenskezelo_backend.Data
 
             var statusChange = modelBuilder.Entity<IncidentStatusChange>();
 
-            statusChange.Property(c => c.FromStatus)
+            statusChange.Property(c => c.OldValue)
                 .HasConversion<string>()
                 .HasMaxLength(20);
-            statusChange.Property(c => c.ToStatus)
+            statusChange.Property(c => c.NewValue)
                 .HasConversion<string>()
                 .HasMaxLength(20);
 
             statusChange.HasIndex(c => new { c.IncidentId, c.OccurredAtUtc });
+
+            incident.HasMany(i => i.TitleHistory)
+                .WithOne(c => c.Incident)
+                .HasForeignKey(c => c.IncidentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            var titleChange = modelBuilder.Entity<IncidentTitleChange>();
+
+            titleChange.Property(c => c.OldValue).HasMaxLength(IncidentLimits.TitleMaxLength);
+            titleChange.Property(c => c.NewValue).HasMaxLength(IncidentLimits.TitleMaxLength);
+            titleChange.HasIndex(c => new { c.IncidentId, c.OccurredAtUtc });
+
+            incident.HasMany(i => i.DescriptionHistory)
+                .WithOne(c => c.Incident)
+                .HasForeignKey(c => c.IncidentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            var descriptionChange = modelBuilder.Entity<IncidentDescriptionChange>();
+
+            descriptionChange.Property(c => c.OldValue).HasMaxLength(IncidentLimits.DescriptionMaxLength);
+            descriptionChange.Property(c => c.NewValue).HasMaxLength(IncidentLimits.DescriptionMaxLength);
+            descriptionChange.HasIndex(c => new { c.IncidentId, c.OccurredAtUtc });
+
+            incident.HasMany(i => i.PriorityHistory)
+                .WithOne(c => c.Incident)
+                .HasForeignKey(c => c.IncidentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            var priorityChange = modelBuilder.Entity<IncidentPriorityChange>();
+
+            priorityChange.Property(c => c.OldValue)
+                .HasConversion<string>()
+                .HasMaxLength(10);
+            priorityChange.Property(c => c.NewValue)
+                .HasConversion<string>()
+                .HasMaxLength(10);
+            priorityChange.HasIndex(c => new { c.IncidentId, c.OccurredAtUtc });
         }
 
         private static readonly ValueConverter<DateTime, DateTime> AsUtc =

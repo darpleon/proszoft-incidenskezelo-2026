@@ -19,11 +19,11 @@ public record IncidentResponse(
     public static IncidentResponse From(Incident incident)
     {
         var updatedAt = incident.StatusHistory.Count == 0
-            ? incident.CreatedAtUtc
+            ? incident.Creation.OccurredAtUtc
             : incident.StatusHistory.Max(c => c.OccurredAtUtc);
 
         var closedAt = incident.StatusHistory
-            .Where(c => c.ToStatus == IncidentStatus.Resolved)
+            .Where(c => c.NewValue == IncidentStatus.Resolved)
             .Select(c => (DateTime?)c.OccurredAtUtc)
             .FirstOrDefault();
 
@@ -33,7 +33,7 @@ public record IncidentResponse(
             incident.Description,
             incident.Status,
             incident.Priority,
-            incident.CreatedAtUtc,
+            incident.Creation.OccurredAtUtc,
             updatedAt,
             closedAt);
     }
@@ -51,8 +51,8 @@ public record IncidentStatusChangeResponse(
         return new IncidentStatusChangeResponse(
             change.Id,
             change.IncidentId,
-            change.FromStatus,
-            change.ToStatus,
+            change.OldValue,
+            change.NewValue,
             change.OccurredAtUtc);
     }
 }

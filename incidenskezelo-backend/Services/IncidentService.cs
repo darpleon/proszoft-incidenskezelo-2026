@@ -10,8 +10,9 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
     public async Task<List<IncidentResponse>> GetAllAsync(CancellationToken ct)
     {
         return await context.Incidents.AsNoTracking()
-            .OrderByDescending(i => i.CreatedAtUtc)
+            .OrderByDescending(i => i.Creation.OccurredAtUtc)
             .Include(i => i.StatusHistory)
+            .Include(i => i.Creation)
             .Select(i => ToResponse(i))
             .ToListAsync(ct);
     }
@@ -21,6 +22,7 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
         return await context.Incidents.AsNoTracking()
             .Where(i => i.IncidentId == id)
             .Include(i => i.StatusHistory)
+            .Include(i => i.Creation)
             .Select(i => ToResponse(i))
             .FirstOrDefaultAsync(ct);
     }
@@ -40,6 +42,7 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
     {
         var incident = await context.Incidents
             .Include(i => i.StatusHistory)
+            .Include(i => i.Creation)
             .FirstOrDefaultAsync(i => i.IncidentId == id, ct);
 
         if (incident is null)
@@ -69,7 +72,7 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
             .OrderBy(c => c.OccurredAtUtc)
             .ThenBy(c => c.Id)
             .Select(c => new IncidentStatusChangeResponse(
-                c.Id, c.IncidentId, c.FromStatus, c.ToStatus, c.OccurredAtUtc))
+                c.Id, c.IncidentId, c.OldValue, c.NewValue, c.OccurredAtUtc))
             .ToListAsync(ct);
     }
 
@@ -81,10 +84,10 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
             i.Description,
             i.Status,
             i.Priority,
-            i.CreatedAtUtc,
-            i.StatusHistory.Max(c => (DateTime?)c.OccurredAtUtc) ?? i.CreatedAtUtc,
+            i.Creation.OccurredAtUtc,
+            i.StatusHistory.Max(c => (DateTime?)c.OccurredAtUtc) ?? i.Creation.OccurredAtUtc,
             i.StatusHistory
-                .Where(c => c.ToStatus == IncidentStatus.Resolved)
+                .Where(c => c.NewValue == IncidentStatus.Resolved)
                 .Select(c => (DateTime?)c.OccurredAtUtc)
                 .FirstOrDefault());
     }

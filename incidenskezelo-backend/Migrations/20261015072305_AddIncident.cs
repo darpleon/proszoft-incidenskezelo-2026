@@ -6,17 +6,27 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace incidenskezelo_backend.Migrations
 {
     /// <inheritdoc />
-    public partial class AddIncidentHistory : Migration
+    public partial class AddIncident : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<DateTime>(
-                name: "CreatedAtUtc",
-                table: "Incidents",
-                type: "datetime2",
-                nullable: false,
-                defaultValue: new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified));
+            migrationBuilder.CreateTable(
+                name: "Incidents",
+                columns: table => new
+                {
+                    IncidentId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Title = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(4000)", maxLength: 4000, nullable: false),
+                    Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    Priority = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: false),
+                    CreatedAtUtc = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Incidents", x => x.IncidentId);
+                });
 
             migrationBuilder.CreateTable(
                 name: "IncidentStatusChanges",
@@ -52,9 +62,8 @@ namespace incidenskezelo_backend.Migrations
             migrationBuilder.DropTable(
                 name: "IncidentStatusChanges");
 
-            migrationBuilder.DropColumn(
-                name: "CreatedAtUtc",
-                table: "Incidents");
+            migrationBuilder.DropTable(
+                name: "Incidents");
         }
     }
 }

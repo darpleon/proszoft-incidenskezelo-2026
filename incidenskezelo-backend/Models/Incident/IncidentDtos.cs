@@ -13,7 +13,7 @@ public record UpdateDescriptionRequest(string Description);
 public record UpdatePriorityRequest(IncidentPriority Priority);
 
 public record IncidentResponse(
-    int IncidentId,
+    Guid Id,
     string Title,
     string Description,
     IncidentStatus Status,
@@ -29,7 +29,7 @@ public record IncidentResponse(
             : null;
 
         return new IncidentResponse(
-            incident.IncidentId,
+            incident.PublicId,
             incident.Title,
             incident.Description,
             incident.Status,
@@ -58,7 +58,6 @@ public record IncidentResponse(
 
 public record IncidentChangeResponse(
     string Kind,
-    int Id,
     DateTime OccurredAtUtc,
     string? OldValue,
     string? NewValue);

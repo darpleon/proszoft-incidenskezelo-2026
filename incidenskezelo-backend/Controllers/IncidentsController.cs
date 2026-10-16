@@ -16,10 +16,11 @@ public class IncidentsController(IIncidentService incidentService) : ControllerB
         return await incidentService.GetAllAsync(ct);
     }
 
-    [HttpGet("{id:int}")]
+    [HttpGet("{id}")]
     [ProducesResponseType(typeof(IncidentResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<IncidentResponse>> GetById(int id, CancellationToken ct)
+    public async Task<ActionResult<IncidentResponse>> GetById(Guid id, CancellationToken ct)
     {
         var incident = await incidentService.GetByIdAsync(id, ct);
         return incident is null ? Missing(id) : incident;
@@ -40,14 +41,15 @@ public class IncidentsController(IIncidentService incidentService) : ControllerB
         }
 
         var incident = await incidentService.CreateAsync(request, ct);
-        return CreatedAtAction(nameof(GetById), new { id = incident.IncidentId }, incident);
+        return CreatedAtAction(nameof(GetById), new { id = incident.Id }, incident);
     }
 
-    [HttpPatch("{id:int}/title")]
+    [HttpPatch("{id}/title")]
     [ProducesResponseType(typeof(IncidentResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<IncidentResponse>> UpdateTitle(int id, UpdateTitleRequest request, CancellationToken ct)
+    public async Task<ActionResult<IncidentResponse>> UpdateTitle(Guid id, UpdateTitleRequest request, CancellationToken ct)
     {
         if (IncidentValidator.TitleError(request.Title) is { } error)
         {
@@ -58,11 +60,12 @@ public class IncidentsController(IIncidentService incidentService) : ControllerB
         return incident is null ? Missing(id) : incident;
     }
 
-    [HttpPatch("{id:int}/description")]
+    [HttpPatch("{id}/description")]
     [ProducesResponseType(typeof(IncidentResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<IncidentResponse>> UpdateDescription(int id, UpdateDescriptionRequest request, CancellationToken ct)
+    public async Task<ActionResult<IncidentResponse>> UpdateDescription(Guid id, UpdateDescriptionRequest request, CancellationToken ct)
     {
         if (IncidentValidator.DescriptionError(request.Description) is { } error)
         {
@@ -73,22 +76,22 @@ public class IncidentsController(IIncidentService incidentService) : ControllerB
         return incident is null ? Missing(id) : incident;
     }
 
-    [HttpPatch("{id:int}/priority")]
+    [HttpPatch("{id}/priority")]
     [ProducesResponseType(typeof(IncidentResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<IncidentResponse>> UpdatePriority(int id, UpdatePriorityRequest request, CancellationToken ct)
+    public async Task<ActionResult<IncidentResponse>> UpdatePriority(Guid id, UpdatePriorityRequest request, CancellationToken ct)
     {
         var incident = await incidentService.UpdatePriorityAsync(id, request.Priority, ct);
         return incident is null ? Missing(id) : incident;
     }
 
-    [HttpPatch("{id:int}/status")]
+    [HttpPatch("{id}/status")]
     [ProducesResponseType(typeof(IncidentResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
-    public async Task<ActionResult<IncidentResponse>> Transition(int id, TransitionRequest request, CancellationToken ct)
+    public async Task<ActionResult<IncidentResponse>> Transition(Guid id, TransitionRequest request, CancellationToken ct)
     {
         try
         {
@@ -106,10 +109,11 @@ public class IncidentsController(IIncidentService incidentService) : ControllerB
         }
     }
 
-    [HttpGet("{id:int}/history")]
+    [HttpGet("{id}/history")]
     [ProducesResponseType(typeof(List<IncidentChangeResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<List<IncidentChangeResponse>>> GetHistory(int id, CancellationToken ct)
+    public async Task<ActionResult<List<IncidentChangeResponse>>> GetHistory(Guid id, CancellationToken ct)
     {
         var history = await incidentService.GetHistoryAsync(id, ct);
         return history is null ? Missing(id) : history;
@@ -133,7 +137,7 @@ public class IncidentsController(IIncidentService incidentService) : ControllerB
         });
     }
 
-    private NotFoundObjectResult Missing(int id)
+    private NotFoundObjectResult Missing(Guid id)
     {
         return NotFound(new ProblemDetails
         {

@@ -49,6 +49,7 @@ public class IncidentsController(IIncidentService incidentService) : ControllerB
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<ActionResult<IncidentResponse>> UpdateTitle(Guid id, UpdateTitleRequest request, CancellationToken ct)
     {
         if (IncidentValidator.TitleError(request.Title) is { } error)
@@ -56,8 +57,20 @@ public class IncidentsController(IIncidentService incidentService) : ControllerB
             return Invalid([error]);
         }
 
-        var incident = await incidentService.UpdateTitleAsync(id, request.Title, ct);
-        return incident is null ? Missing(id) : incident;
+        if (request.ExpectedRevision is not { } expectedRevision)
+        {
+            return Invalid(["expectedRevision is required."]);
+        }
+
+        try
+        {
+            var incident = await incidentService.UpdateTitleAsync(id, request.Title, expectedRevision, ct);
+            return incident is null ? Missing(id) : incident;
+        }
+        catch (RevisionConflictException ex)
+        {
+            return RevisionConflict(ex);
+        }
     }
 
     [HttpPatch("{id}/description")]
@@ -65,6 +78,7 @@ public class IncidentsController(IIncidentService incidentService) : ControllerB
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<ActionResult<IncidentResponse>> UpdateDescription(Guid id, UpdateDescriptionRequest request, CancellationToken ct)
     {
         if (IncidentValidator.DescriptionError(request.Description) is { } error)
@@ -72,18 +86,43 @@ public class IncidentsController(IIncidentService incidentService) : ControllerB
             return Invalid([error]);
         }
 
-        var incident = await incidentService.UpdateDescriptionAsync(id, request.Description, ct);
-        return incident is null ? Missing(id) : incident;
+        if (request.ExpectedRevision is not { } expectedRevision)
+        {
+            return Invalid(["expectedRevision is required."]);
+        }
+
+        try
+        {
+            var incident = await incidentService.UpdateDescriptionAsync(id, request.Description, expectedRevision, ct);
+            return incident is null ? Missing(id) : incident;
+        }
+        catch (RevisionConflictException ex)
+        {
+            return RevisionConflict(ex);
+        }
     }
 
     [HttpPatch("{id}/priority")]
     [ProducesResponseType(typeof(IncidentResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<ActionResult<IncidentResponse>> UpdatePriority(Guid id, UpdatePriorityRequest request, CancellationToken ct)
     {
-        var incident = await incidentService.UpdatePriorityAsync(id, request.Priority, ct);
-        return incident is null ? Missing(id) : incident;
+        if (request.ExpectedRevision is not { } expectedRevision)
+        {
+            return Invalid(["expectedRevision is required."]);
+        }
+
+        try
+        {
+            var incident = await incidentService.UpdatePriorityAsync(id, request.Priority, expectedRevision, ct);
+            return incident is null ? Missing(id) : incident;
+        }
+        catch (RevisionConflictException ex)
+        {
+            return RevisionConflict(ex);
+        }
     }
 
     [HttpPatch("{id}/status")]
@@ -93,10 +132,19 @@ public class IncidentsController(IIncidentService incidentService) : ControllerB
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<ActionResult<IncidentResponse>> Transition(Guid id, TransitionRequest request, CancellationToken ct)
     {
+        if (request.ExpectedRevision is not { } expectedRevision)
+        {
+            return Invalid(["expectedRevision is required."]);
+        }
+
         try
         {
-            var incident = await incidentService.TransitionAsync(id, request.Status, ct);
+            var incident = await incidentService.TransitionAsync(id, request.Status, expectedRevision, ct);
             return incident is null ? Missing(id) : incident;
+        }
+        catch (RevisionConflictException ex)
+        {
+            return RevisionConflict(ex);
         }
         catch (InvalidOperationException ex)
         {
@@ -144,6 +192,23 @@ public class IncidentsController(IIncidentService incidentService) : ControllerB
             Title = "Not found",
             Detail = $"No incident with id {id}.",
             Status = StatusCodes.Status404NotFound
+        });
+    }
+
+    private ConflictObjectResult RevisionConflict(RevisionConflictException ex)
+    {
+        return Conflict(new ProblemDetails
+        {
+            Title = "Revision conflict",
+            Detail = ex.Message,
+            Status = StatusCodes.Status409Conflict,
+            Extensions =
+            {
+                ["field"] = ex.Field,
+                ["currentRevision"] = ex.CurrentRevision,
+                ["currentValue"] = ex.CurrentValue,
+                ["revisions"] = ex.Current
+            }
         });
     }
 }

@@ -44,7 +44,7 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
         return IncidentResponse.From(incident);
     }
 
-    public async Task<IncidentResponse?> TransitionAsync(Guid id, IncidentStatus status, CancellationToken ct)
+    public async Task<IncidentResponse?> TransitionAsync(Guid id, IncidentStatus status, int expectedRevision, CancellationToken ct)
     {
         var incident = await LoadWithHistoryAsync(id, ct);
 
@@ -53,25 +53,38 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
             return null;
         }
 
+        DemandRevision(incident, "status", expectedRevision, incident.StatusRevision, incident.Status.ToString());
         incident.TransitionTo(status, new ChangeContext(timeProvider.GetUtcNow().UtcDateTime));
         await context.SaveChangesAsync(ct);
 
         return IncidentResponse.From(incident);
     }
 
-    public Task<IncidentResponse?> UpdateTitleAsync(Guid id, string title, CancellationToken ct)
+    public Task<IncidentResponse?> UpdateTitleAsync(Guid id, string title, int expectedRevision, CancellationToken ct)
     {
-        return ApplyAsync(id, (incident, context) => incident.UpdateTitle(title, context), ct);
+        return ApplyAsync(id, (incident, context) =>
+        {
+            DemandRevision(incident, "title", expectedRevision, incident.TitleRevision, incident.Title);
+            incident.UpdateTitle(title, context);
+        }, ct);
     }
 
-    public Task<IncidentResponse?> UpdateDescriptionAsync(Guid id, string description, CancellationToken ct)
+    public Task<IncidentResponse?> UpdateDescriptionAsync(Guid id, string description, int expectedRevision, CancellationToken ct)
     {
-        return ApplyAsync(id, (incident, context) => incident.UpdateDescription(description, context), ct);
+        return ApplyAsync(id, (incident, context) =>
+        {
+            DemandRevision(incident, "description", expectedRevision, incident.DescriptionRevision, incident.Description);
+            incident.UpdateDescription(description, context);
+        }, ct);
     }
 
-    public Task<IncidentResponse?> UpdatePriorityAsync(Guid id, IncidentPriority priority, CancellationToken ct)
+    public Task<IncidentResponse?> UpdatePriorityAsync(Guid id, IncidentPriority priority, int expectedRevision, CancellationToken ct)
     {
-        return ApplyAsync(id, (incident, context) => incident.UpdatePriority(priority, context), ct);
+        return ApplyAsync(id, (incident, context) =>
+        {
+            DemandRevision(incident, "priority", expectedRevision, incident.PriorityRevision, incident.Priority.ToString());
+            incident.UpdatePriority(priority, context);
+        }, ct);
     }
 
     private async Task<IncidentResponse?> ApplyAsync(Guid id, Action<Incident, ChangeContext> update, CancellationToken ct)
@@ -87,6 +100,14 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
         await context.SaveChangesAsync(ct);
 
         return IncidentResponse.From(incident);
+    }
+
+    private static void DemandRevision(Incident incident, string field, int expected, int current, string currentValue)
+    {
+        if (expected != current)
+        {
+            throw new RevisionConflictException(field, current, currentValue, IncidentRevisions.From(incident));
+        }
     }
 
     private Task<Incident?> LoadWithHistoryAsync(Guid id, CancellationToken ct)

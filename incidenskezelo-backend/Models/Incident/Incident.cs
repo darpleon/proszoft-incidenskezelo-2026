@@ -8,11 +8,12 @@ public class Incident
     private static readonly FrozenDictionary<IncidentStatus, FrozenSet<IncidentStatus>> AllowedTransitions =
         new Dictionary<IncidentStatus, FrozenSet<IncidentStatus>>
         {
-            [IncidentStatus.Open] = new[] { IncidentStatus.Investigating }.ToFrozenSet(),
-            [IncidentStatus.Investigating] = new[] { IncidentStatus.InProgress }.ToFrozenSet(),
-            [IncidentStatus.InProgress] = new[] { IncidentStatus.Verifying }.ToFrozenSet(),
+            [IncidentStatus.Open] = new[] { IncidentStatus.Investigating, IncidentStatus.Declined }.ToFrozenSet(),
+            [IncidentStatus.Investigating] = new[] { IncidentStatus.InProgress, IncidentStatus.Declined }.ToFrozenSet(),
+            [IncidentStatus.InProgress] = new[] { IncidentStatus.Verifying, IncidentStatus.Declined }.ToFrozenSet(),
             [IncidentStatus.Verifying] = new[] { IncidentStatus.Resolved, IncidentStatus.InProgress }.ToFrozenSet(),
-            [IncidentStatus.Resolved] = new[] { IncidentStatus.InProgress }.ToFrozenSet()
+            [IncidentStatus.Resolved] = new[] { IncidentStatus.InProgress }.ToFrozenSet(),
+            [IncidentStatus.Declined] = new[] { IncidentStatus.InProgress }.ToFrozenSet()
         }.ToFrozenDictionary();
 
     private Incident() { }

@@ -6,5 +6,6 @@ public enum IncidentStatus
     Investigating,
     InProgress,
     Verifying,
-    Resolved
+    Resolved,
+    Declined
 }

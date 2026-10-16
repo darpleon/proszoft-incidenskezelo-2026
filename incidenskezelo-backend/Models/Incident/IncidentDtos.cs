@@ -24,8 +24,8 @@ public record IncidentResponse(
 {
     public static IncidentResponse From(Incident incident)
     {
-        DateTime? closedAt = incident.Status == IncidentStatus.Resolved
-            ? incident.StatusHistory.Last(c => c.NewValue == IncidentStatus.Resolved).OccurredAtUtc
+        DateTime? closedAt = incident.Status is IncidentStatus.Resolved or IncidentStatus.Declined
+            ? incident.StatusHistory.Last(c => c.NewValue == incident.Status).OccurredAtUtc
             : null;
 
         return new IncidentResponse(

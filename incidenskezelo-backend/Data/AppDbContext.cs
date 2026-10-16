@@ -90,6 +90,8 @@ namespace incidenskezelo_backend.Data
             incident.Property(i => i.Title).HasMaxLength(IncidentLimits.TitleMaxLength);
             incident.Property(i => i.Description).HasMaxLength(IncidentLimits.DescriptionMaxLength);
 
+            incident.HasIndex(i => i.PublicId).IsUnique();
+
             incident.HasOne(i => i.Creation)
                 .WithOne(c => c.Incident)
                 .HasForeignKey<IncidentCreation>(c => c.IncidentId)

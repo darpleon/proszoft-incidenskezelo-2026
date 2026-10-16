@@ -10,19 +10,24 @@ namespace incidenskezelo_backend.Controllers;
 public class IncidentsController(IIncidentService incidentService) : ControllerBase
 {
     [HttpGet]
+    [ProducesResponseType(typeof(List<IncidentResponse>), StatusCodes.Status200OK)]
     public async Task<ActionResult<List<IncidentResponse>>> GetAll(CancellationToken ct)
     {
         return await incidentService.GetAllAsync(ct);
     }
 
     [HttpGet("{id:int}")]
+    [ProducesResponseType(typeof(IncidentResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<IncidentResponse>> GetById(int id, CancellationToken ct)
     {
         var incident = await incidentService.GetByIdAsync(id, ct);
-        return incident is null ? NotFound() : incident;
+        return incident is null ? Missing(id) : incident;
     }
 
     [HttpPost]
+    [ProducesResponseType(typeof(IncidentResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<IncidentResponse>> Create(CreateIncidentRequest request, CancellationToken ct)
     {
         var errors = new List<string>();
@@ -39,6 +44,9 @@ public class IncidentsController(IIncidentService incidentService) : ControllerB
     }
 
     [HttpPatch("{id:int}/title")]
+    [ProducesResponseType(typeof(IncidentResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<IncidentResponse>> UpdateTitle(int id, UpdateTitleRequest request, CancellationToken ct)
     {
         if (IncidentValidator.TitleError(request.Title) is { } error)
@@ -47,10 +55,13 @@ public class IncidentsController(IIncidentService incidentService) : ControllerB
         }
 
         var incident = await incidentService.UpdateTitleAsync(id, request.Title, ct);
-        return incident is null ? NotFound() : incident;
+        return incident is null ? Missing(id) : incident;
     }
 
     [HttpPatch("{id:int}/description")]
+    [ProducesResponseType(typeof(IncidentResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<IncidentResponse>> UpdateDescription(int id, UpdateDescriptionRequest request, CancellationToken ct)
     {
         if (IncidentValidator.DescriptionError(request.Description) is { } error)
@@ -59,14 +70,49 @@ public class IncidentsController(IIncidentService incidentService) : ControllerB
         }
 
         var incident = await incidentService.UpdateDescriptionAsync(id, request.Description, ct);
-        return incident is null ? NotFound() : incident;
+        return incident is null ? Missing(id) : incident;
     }
 
     [HttpPatch("{id:int}/priority")]
+    [ProducesResponseType(typeof(IncidentResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<IncidentResponse>> UpdatePriority(int id, UpdatePriorityRequest request, CancellationToken ct)
     {
         var incident = await incidentService.UpdatePriorityAsync(id, request.Priority, ct);
-        return incident is null ? NotFound() : incident;
+        return incident is null ? Missing(id) : incident;
+    }
+
+    [HttpPatch("{id:int}/status")]
+    [ProducesResponseType(typeof(IncidentResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<IncidentResponse>> Transition(int id, TransitionRequest request, CancellationToken ct)
+    {
+        try
+        {
+            var incident = await incidentService.TransitionAsync(id, request.Status, ct);
+            return incident is null ? Missing(id) : incident;
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new ProblemDetails
+            {
+                Title = "Invalid status transition",
+                Detail = ex.Message,
+                Status = StatusCodes.Status409Conflict
+            });
+        }
+    }
+
+    [HttpGet("{id:int}/history")]
+    [ProducesResponseType(typeof(List<IncidentChangeResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<List<IncidentChangeResponse>>> GetHistory(int id, CancellationToken ct)
+    {
+        var history = await incidentService.GetHistoryAsync(id, ct);
+        return history is null ? Missing(id) : history;
     }
 
     private static void Collect(List<string> errors, string? error)
@@ -87,29 +133,13 @@ public class IncidentsController(IIncidentService incidentService) : ControllerB
         });
     }
 
-    [HttpPatch("{id:int}/status")]
-    public async Task<ActionResult<IncidentResponse>> Transition(int id, TransitionRequest request, CancellationToken ct)
+    private NotFoundObjectResult Missing(int id)
     {
-        try
+        return NotFound(new ProblemDetails
         {
-            var incident = await incidentService.TransitionAsync(id, request.Status, ct);
-            return incident is null ? NotFound() : incident;
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Conflict(new ProblemDetails
-            {
-                Title = "Invalid status transition",
-                Detail = ex.Message,
-                Status = StatusCodes.Status409Conflict
-            });
-        }
-    }
-
-    [HttpGet("{id:int}/history")]
-    public async Task<ActionResult<List<IncidentChangeResponse>>> GetHistory(int id, CancellationToken ct)
-    {
-        var history = await incidentService.GetHistoryAsync(id, ct);
-        return history is null ? NotFound() : history;
+            Title = "Not found",
+            Detail = $"No incident with id {id}.",
+            Status = StatusCodes.Status404NotFound
+        });
     }
 }

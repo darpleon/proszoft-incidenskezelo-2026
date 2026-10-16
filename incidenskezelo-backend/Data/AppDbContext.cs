@@ -10,6 +10,8 @@ namespace incidenskezelo_backend.Data
 
         public DbSet<Event> Events => Set<Event>();
 
+        public DbSet<User> Users => Set<User>();
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -46,6 +48,18 @@ namespace incidenskezelo_backend.Data
                 entity.Property(evt => evt.ReceivedAtUtc).HasPrecision(3).HasConversion(AsUtc);
                 entity.HasIndex(evt => evt.SourceEventId).IsUnique();
                 entity.HasOne(evt => evt.Service).WithMany().HasForeignKey(evt => evt.ServiceId).OnDelete(DeleteBehavior.NoAction);
+            });
+
+            modelBuilder.Entity<User>(entity =>
+            {
+                entity.ToTable("AppUser", table =>
+                    table.HasCheckConstraint("CK_AppUser_Role", InList<UserRole>("Role")));
+                entity.Property(user => user.Name).HasMaxLength(UserLimits.NameMaxLength);
+                entity.Property(user => user.Email).HasMaxLength(UserLimits.EmailMaxLength);
+                entity.Property(user => user.PasswordHash).HasMaxLength(100);
+                entity.Property(user => user.Role).HasConversion<string>().HasMaxLength(20);
+                entity.Property(user => user.CreatedAtUtc).HasPrecision(3).HasConversion(AsUtc);
+                entity.HasIndex(user => user.Email).IsUnique();
             });
         }
 

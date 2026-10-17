@@ -20,10 +20,10 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
             .ToListAsync(ct);
     }
 
-    public async Task<IncidentResponse?> GetByIdAsync(int id, CancellationToken ct)
+    public async Task<IncidentResponse?> GetByIdAsync(Guid id, CancellationToken ct)
     {
         return await context.Incidents.AsNoTracking()
-            .Where(i => i.IncidentId == id)
+            .Where(i => i.PublicId == id)
             .Include(i => i.Creation)
             .Include(i => i.StatusHistory)
             .Include(i => i.TitleHistory)
@@ -44,7 +44,7 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
         return IncidentResponse.From(incident);
     }
 
-    public async Task<IncidentResponse?> TransitionAsync(int id, IncidentStatus status, CancellationToken ct)
+    public async Task<IncidentResponse?> TransitionAsync(Guid id, IncidentStatus status, int expectedRevision, CancellationToken ct)
     {
         var incident = await LoadWithHistoryAsync(id, ct);
 
@@ -53,28 +53,41 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
             return null;
         }
 
+        DemandRevision(incident, "status", expectedRevision, incident.StatusRevision, incident.Status.ToString());
         incident.TransitionTo(status, new ChangeContext(timeProvider.GetUtcNow().UtcDateTime));
         await context.SaveChangesAsync(ct);
 
         return IncidentResponse.From(incident);
     }
 
-    public Task<IncidentResponse?> UpdateTitleAsync(int id, string title, CancellationToken ct)
+    public Task<IncidentResponse?> UpdateTitleAsync(Guid id, string title, int expectedRevision, CancellationToken ct)
     {
-        return ApplyAsync(id, (incident, context) => incident.UpdateTitle(title, context), ct);
+        return ApplyAsync(id, (incident, context) =>
+        {
+            DemandRevision(incident, "title", expectedRevision, incident.TitleRevision, incident.Title);
+            incident.UpdateTitle(title, context);
+        }, ct);
     }
 
-    public Task<IncidentResponse?> UpdateDescriptionAsync(int id, string description, CancellationToken ct)
+    public Task<IncidentResponse?> UpdateDescriptionAsync(Guid id, string description, int expectedRevision, CancellationToken ct)
     {
-        return ApplyAsync(id, (incident, context) => incident.UpdateDescription(description, context), ct);
+        return ApplyAsync(id, (incident, context) =>
+        {
+            DemandRevision(incident, "description", expectedRevision, incident.DescriptionRevision, incident.Description);
+            incident.UpdateDescription(description, context);
+        }, ct);
     }
 
-    public Task<IncidentResponse?> UpdatePriorityAsync(int id, IncidentPriority priority, CancellationToken ct)
+    public Task<IncidentResponse?> UpdatePriorityAsync(Guid id, IncidentPriority priority, int expectedRevision, CancellationToken ct)
     {
-        return ApplyAsync(id, (incident, context) => incident.UpdatePriority(priority, context), ct);
+        return ApplyAsync(id, (incident, context) =>
+        {
+            DemandRevision(incident, "priority", expectedRevision, incident.PriorityRevision, incident.Priority.ToString());
+            incident.UpdatePriority(priority, context);
+        }, ct);
     }
 
-    private async Task<IncidentResponse?> ApplyAsync(int id, Action<Incident, ChangeContext> update, CancellationToken ct)
+    private async Task<IncidentResponse?> ApplyAsync(Guid id, Action<Incident, ChangeContext> update, CancellationToken ct)
     {
         var incident = await LoadWithHistoryAsync(id, ct);
 
@@ -89,7 +102,15 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
         return IncidentResponse.From(incident);
     }
 
-    private Task<Incident?> LoadWithHistoryAsync(int id, CancellationToken ct)
+    private static void DemandRevision(Incident incident, string field, int expected, int current, string currentValue)
+    {
+        if (expected != current)
+        {
+            throw new RevisionConflictException(field, current, currentValue, IncidentRevisions.From(incident));
+        }
+    }
+
+    private Task<Incident?> LoadWithHistoryAsync(Guid id, CancellationToken ct)
     {
         return context.Incidents
             .Include(i => i.Creation)
@@ -97,28 +118,30 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
             .Include(i => i.TitleHistory)
             .Include(i => i.DescriptionHistory)
             .Include(i => i.PriorityHistory)
-            .FirstOrDefaultAsync(i => i.IncidentId == id, ct);
+            .FirstOrDefaultAsync(i => i.PublicId == id, ct);
     }
 
-    public async Task<List<IncidentChangeResponse>?> GetHistoryAsync(int id, CancellationToken ct)
+    public async Task<List<IncidentChangeResponse>?> GetHistoryAsync(Guid id, CancellationToken ct)
     {
-        var exists = await context.Incidents.AsNoTracking()
-            .AnyAsync(i => i.IncidentId == id, ct);
+        var incidentId = await context.Incidents.AsNoTracking()
+            .Where(i => i.PublicId == id)
+            .Select(i => (int?)i.IncidentId)
+            .FirstOrDefaultAsync(ct);
 
-        if (!exists)
+        if (incidentId is null)
         {
             return null;
         }
 
         var created = await context.IncidentCreations.AsNoTracking()
-            .Where(c => c.IncidentId == id)
-            .Select(c => new IncidentChangeResponse("created", c.Id, c.OccurredAtUtc, null, null))
+            .Where(c => c.IncidentId == incidentId)
+            .Select(c => new IncidentChangeResponse("created", c.OccurredAtUtc, null, null))
             .ToListAsync(ct);
 
-        var status = await MapKindAsync(context.IncidentStatusChanges.AsNoTracking().Where(c => c.IncidentId == id), "status", ct);
-        var title = await MapKindAsync(context.IncidentTitleChanges.AsNoTracking().Where(c => c.IncidentId == id), "title", ct);
-        var description = await MapKindAsync(context.IncidentDescriptionChanges.AsNoTracking().Where(c => c.IncidentId == id), "description", ct);
-        var priority = await MapKindAsync(context.IncidentPriorityChanges.AsNoTracking().Where(c => c.IncidentId == id), "priority", ct);
+        var status = await MapKindAsync(context.IncidentStatusChanges.AsNoTracking().Where(c => c.IncidentId == incidentId), "status", ct);
+        var title = await MapKindAsync(context.IncidentTitleChanges.AsNoTracking().Where(c => c.IncidentId == incidentId), "title", ct);
+        var description = await MapKindAsync(context.IncidentDescriptionChanges.AsNoTracking().Where(c => c.IncidentId == incidentId), "description", ct);
+        var priority = await MapKindAsync(context.IncidentPriorityChanges.AsNoTracking().Where(c => c.IncidentId == incidentId), "priority", ct);
 
         return created
             .Concat(status)
@@ -126,7 +149,6 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
             .Concat(description)
             .Concat(priority)
             .OrderBy(e => e.OccurredAtUtc)
-            .ThenBy(e => e.Id)
             .ToList();
     }
 
@@ -134,11 +156,13 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
         IQueryable<IncidentChange<T>> changes, string kind, CancellationToken ct)
     {
         var rows = await changes
-            .Select(c => new { c.Id, c.OccurredAtUtc, c.OldValue, c.NewValue })
+            .OrderBy(c => c.OccurredAtUtc)
+            .ThenBy(c => c.Id)
+            .Select(c => new { c.OccurredAtUtc, c.OldValue, c.NewValue })
             .ToListAsync(ct);
 
         return rows
-            .Select(r => new IncidentChangeResponse(kind, r.Id, r.OccurredAtUtc, r.OldValue?.ToString(), r.NewValue?.ToString()))
+            .Select(r => new IncidentChangeResponse(kind, r.OccurredAtUtc, r.OldValue?.ToString(), r.NewValue?.ToString()))
             .ToList();
     }
 }

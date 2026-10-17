@@ -22,6 +22,7 @@ public class Incident
     {
         var incident = new Incident
         {
+            PublicId = Guid.NewGuid(),
             Title = title,
             Description = description,
             Priority = priority,
@@ -33,6 +34,16 @@ public class Incident
     }
 
     public int IncidentId { get; private set; }
+
+    public Guid PublicId { get; private set; }
+
+    public int TitleRevision { get; private set; }
+
+    public int DescriptionRevision { get; private set; }
+
+    public int PriorityRevision { get; private set; }
+
+    public int StatusRevision { get; private set; }
 
     public string Title { get; private set; } = string.Empty;
 
@@ -60,6 +71,7 @@ public class Incident
         }
 
         TitleHistory.Add(new IncidentTitleChange(this, Title, newTitle, context.AtUtc));
+        TitleRevision++;
         Title = newTitle;
         return true;
     }
@@ -72,6 +84,7 @@ public class Incident
         }
 
         DescriptionHistory.Add(new IncidentDescriptionChange(this, Description, newDescription, context.AtUtc));
+        DescriptionRevision++;
         Description = newDescription;
         return true;
     }
@@ -84,6 +97,7 @@ public class Incident
         }
 
         PriorityHistory.Add(new IncidentPriorityChange(this, Priority, newPriority, context.AtUtc));
+        PriorityRevision++;
         Priority = newPriority;
         return true;
     }
@@ -96,6 +110,7 @@ public class Incident
         }
 
         StatusHistory.Add(new IncidentStatusChange(this, Status, next, context.AtUtc));
+        StatusRevision++;
         Status = next;
     }
 }

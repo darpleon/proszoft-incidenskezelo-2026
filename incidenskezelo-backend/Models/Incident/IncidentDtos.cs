@@ -4,23 +4,30 @@ namespace incidenskezelo_backend.Models.Incident;
 
 public record CreateIncidentRequest(string Title, string Description, IncidentPriority Priority);
 
-public record TransitionRequest(IncidentStatus Status);
+public record TransitionRequest(IncidentStatus Status, int? ExpectedRevision);
 
-public record UpdateTitleRequest(string Title);
+public record UpdateTitleRequest(string Title, int? ExpectedRevision);
 
-public record UpdateDescriptionRequest(string Description);
+public record UpdateDescriptionRequest(string Description, int? ExpectedRevision);
 
-public record UpdatePriorityRequest(IncidentPriority Priority);
+public record UpdatePriorityRequest(IncidentPriority Priority, int? ExpectedRevision);
+
+public record IncidentRevisions(int Title, int Description, int Priority, int Status)
+{
+    public static IncidentRevisions From(Incident incident) =>
+        new(incident.TitleRevision, incident.DescriptionRevision, incident.PriorityRevision, incident.StatusRevision);
+}
 
 public record IncidentResponse(
-    int IncidentId,
+    Guid Id,
     string Title,
     string Description,
     IncidentStatus Status,
     IncidentPriority Priority,
     DateTime CreatedAtUtc,
     DateTime UpdatedAtUtc,
-    DateTime? ClosedAtUtc)
+    DateTime? ClosedAtUtc,
+    IncidentRevisions Revisions)
 {
     public static IncidentResponse From(Incident incident)
     {
@@ -29,14 +36,15 @@ public record IncidentResponse(
             : null;
 
         return new IncidentResponse(
-            incident.IncidentId,
+            incident.PublicId,
             incident.Title,
             incident.Description,
             incident.Status,
             incident.Priority,
             incident.Creation.OccurredAtUtc,
             LatestChangeUtc(incident),
-            closedAt);
+            closedAt,
+            IncidentRevisions.From(incident));
     }
 
     private static DateTime LatestChangeUtc(Incident incident)
@@ -58,7 +66,6 @@ public record IncidentResponse(
 
 public record IncidentChangeResponse(
     string Kind,
-    int Id,
     DateTime OccurredAtUtc,
     string? OldValue,
     string? NewValue);

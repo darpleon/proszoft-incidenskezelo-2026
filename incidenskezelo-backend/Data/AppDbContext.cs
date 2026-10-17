@@ -1,4 +1,6 @@
 using incidenskezelo_backend.Models;
+using incidenskezelo_backend.Models.Incident;
+using incidenskezelo_backend.Models.Incident.Changes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
@@ -12,6 +14,9 @@ namespace incidenskezelo_backend.Data
 
         public DbSet<User> Users => Set<User>();
 
+        public DbSet<Incident> Incidents => Set<Incident>();
+
+        public DbSet<IncidentStatusChange> IncidentStatusChanges => Set<IncidentStatusChange>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -49,7 +54,6 @@ namespace incidenskezelo_backend.Data
                 entity.HasIndex(evt => evt.SourceEventId).IsUnique();
                 entity.HasOne(evt => evt.Service).WithMany().HasForeignKey(evt => evt.ServiceId).OnDelete(DeleteBehavior.NoAction);
             });
-
             modelBuilder.Entity<User>(entity =>
             {
                 entity.ToTable("AppUser", table =>
@@ -61,12 +65,38 @@ namespace incidenskezelo_backend.Data
                 entity.Property(user => user.CreatedAtUtc).HasPrecision(3).HasConversion(AsUtc);
                 entity.HasIndex(user => user.Email).IsUnique();
             });
-        }
 
+            var incident = modelBuilder.Entity<Incident>();
+
+            incident.Property(i => i.Status)
+                .HasConversion<string>()
+                .HasMaxLength(20);
+            incident.Property(i => i.Priority)
+                .HasConversion<string>()
+                .HasMaxLength(10);
+
+            incident.Property(i => i.Title).HasMaxLength(IncidentLimits.TitleMaxLength);
+            incident.Property(i => i.Description).HasMaxLength(IncidentLimits.DescriptionMaxLength);
+
+            incident.HasMany(i => i.StatusHistory)
+                .WithOne(c => c.Incident)
+                .HasForeignKey(c => c.IncidentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            var statusChange = modelBuilder.Entity<IncidentStatusChange>();
+
+            statusChange.Property(c => c.FromStatus)
+                .HasConversion<string>()
+                .HasMaxLength(20);
+            statusChange.Property(c => c.ToStatus)
+                .HasConversion<string>()
+                .HasMaxLength(20);
+
+            statusChange.HasIndex(c => new { c.IncidentId, c.OccurredAtUtc });
+        }
 
         private static readonly ValueConverter<DateTime, DateTime> AsUtc =
             new(value => value, value => DateTime.SpecifyKind(value, DateTimeKind.Utc));
-
 
         private static string InList<TEnum>(string column) where TEnum : struct, Enum
         {

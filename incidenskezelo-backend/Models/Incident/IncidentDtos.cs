@@ -6,6 +6,12 @@ public record CreateIncidentRequest(string Title, string Description, IncidentPr
 
 public record TransitionRequest(IncidentStatus Status);
 
+public record UpdateTitleRequest(string Title);
+
+public record UpdateDescriptionRequest(string Description);
+
+public record UpdatePriorityRequest(IncidentPriority Priority);
+
 public record IncidentResponse(
     int IncidentId,
     string Title,
@@ -18,14 +24,9 @@ public record IncidentResponse(
 {
     public static IncidentResponse From(Incident incident)
     {
-        var updatedAt = incident.StatusHistory.Count == 0
-            ? incident.CreatedAtUtc
-            : incident.StatusHistory.Max(c => c.OccurredAtUtc);
-
-        var closedAt = incident.StatusHistory
-            .Where(c => c.ToStatus == IncidentStatus.Resolved)
-            .Select(c => (DateTime?)c.OccurredAtUtc)
-            .FirstOrDefault();
+        DateTime? closedAt = incident.Status is IncidentStatus.Resolved or IncidentStatus.Declined
+            ? incident.StatusHistory.Last(c => c.NewValue == incident.Status).OccurredAtUtc
+            : null;
 
         return new IncidentResponse(
             incident.IncidentId,
@@ -33,26 +34,31 @@ public record IncidentResponse(
             incident.Description,
             incident.Status,
             incident.Priority,
-            incident.CreatedAtUtc,
-            updatedAt,
+            incident.Creation.OccurredAtUtc,
+            LatestChangeUtc(incident),
             closedAt);
+    }
+
+    private static DateTime LatestChangeUtc(Incident incident)
+    {
+        IEnumerable<IncidentChange>[] streams =
+        [
+            incident.StatusHistory,
+            incident.TitleHistory,
+            incident.DescriptionHistory,
+            incident.PriorityHistory
+        ];
+
+        return streams.SelectMany(s => s)
+            .Select(c => c.OccurredAtUtc)
+            .Append(incident.Creation.OccurredAtUtc)
+            .Max();
     }
 }
 
-public record IncidentStatusChangeResponse(
+public record IncidentChangeResponse(
+    string Kind,
     int Id,
-    int IncidentId,
-    IncidentStatus? FromStatus,
-    IncidentStatus ToStatus,
-    DateTime OccurredAtUtc)
-{
-    public static IncidentStatusChangeResponse From(IncidentStatusChange change)
-    {
-        return new IncidentStatusChangeResponse(
-            change.Id,
-            change.IncidentId,
-            change.FromStatus,
-            change.ToStatus,
-            change.OccurredAtUtc);
-    }
-}
+    DateTime OccurredAtUtc,
+    string? OldValue,
+    string? NewValue);

@@ -25,43 +25,60 @@ public class IncidentsController(IIncidentService incidentService) : ControllerB
     [HttpPost]
     public async Task<ActionResult<IncidentResponse>> Create(CreateIncidentRequest request, CancellationToken ct)
     {
-        var invalid = ValidateCreate(request);
-        if (invalid is not null)
+        var errors = new List<string>();
+        Collect(errors, IncidentValidator.TitleError(request.Title));
+        Collect(errors, IncidentValidator.DescriptionError(request.Description));
+
+        if (errors.Count > 0)
         {
-            return invalid;
+            return Invalid(errors);
         }
 
         var incident = await incidentService.CreateAsync(request, ct);
         return CreatedAtAction(nameof(GetById), new { id = incident.IncidentId }, incident);
     }
 
-    private ActionResult? ValidateCreate(CreateIncidentRequest request)
+    [HttpPatch("{id:int}/title")]
+    public async Task<ActionResult<IncidentResponse>> UpdateTitle(int id, UpdateTitleRequest request, CancellationToken ct)
     {
-        var errors = new List<string>();
-
-        if (string.IsNullOrWhiteSpace(request.Title))
+        if (IncidentValidator.TitleError(request.Title) is { } error)
         {
-            errors.Add("Title is required.");
-        }
-        else if (request.Title.Length > IncidentLimits.TitleMaxLength)
-        {
-            errors.Add($"Title must be at most {IncidentLimits.TitleMaxLength} characters.");
+            return Invalid([error]);
         }
 
-        if (string.IsNullOrWhiteSpace(request.Description))
+        var incident = await incidentService.UpdateTitleAsync(id, request.Title, ct);
+        return incident is null ? NotFound() : incident;
+    }
+
+    [HttpPatch("{id:int}/description")]
+    public async Task<ActionResult<IncidentResponse>> UpdateDescription(int id, UpdateDescriptionRequest request, CancellationToken ct)
+    {
+        if (IncidentValidator.DescriptionError(request.Description) is { } error)
         {
-            errors.Add("Description is required.");
-        }
-        else if (request.Description.Length > IncidentLimits.DescriptionMaxLength)
-        {
-            errors.Add($"Description must be at most {IncidentLimits.DescriptionMaxLength} characters.");
+            return Invalid([error]);
         }
 
-        if (errors.Count == 0)
-        {
-            return null;
-        }
+        var incident = await incidentService.UpdateDescriptionAsync(id, request.Description, ct);
+        return incident is null ? NotFound() : incident;
+    }
 
+    [HttpPatch("{id:int}/priority")]
+    public async Task<ActionResult<IncidentResponse>> UpdatePriority(int id, UpdatePriorityRequest request, CancellationToken ct)
+    {
+        var incident = await incidentService.UpdatePriorityAsync(id, request.Priority, ct);
+        return incident is null ? NotFound() : incident;
+    }
+
+    private static void Collect(List<string> errors, string? error)
+    {
+        if (error is not null)
+        {
+            errors.Add(error);
+        }
+    }
+
+    private ActionResult Invalid(List<string> errors)
+    {
         return BadRequest(new ProblemDetails
         {
             Title = "Invalid incident",
@@ -90,7 +107,7 @@ public class IncidentsController(IIncidentService incidentService) : ControllerB
     }
 
     [HttpGet("{id:int}/history")]
-    public async Task<ActionResult<List<IncidentStatusChangeResponse>>> GetHistory(int id, CancellationToken ct)
+    public async Task<ActionResult<List<IncidentChangeResponse>>> GetHistory(int id, CancellationToken ct)
     {
         var history = await incidentService.GetHistoryAsync(id, ct);
         return history is null ? NotFound() : history;

@@ -5,13 +5,15 @@ namespace incidenskezelo_backend.Models.Incident;
 
 public class Incident
 {
-    private static readonly FrozenDictionary<IncidentStatus, IncidentStatus> NextStatus =
-        new Dictionary<IncidentStatus, IncidentStatus>
+    private static readonly FrozenDictionary<IncidentStatus, FrozenSet<IncidentStatus>> AllowedTransitions =
+        new Dictionary<IncidentStatus, FrozenSet<IncidentStatus>>
         {
-            [IncidentStatus.Open] = IncidentStatus.Investigating,
-            [IncidentStatus.Investigating] = IncidentStatus.InProgress,
-            [IncidentStatus.InProgress] = IncidentStatus.Verifying,
-            [IncidentStatus.Verifying] = IncidentStatus.Resolved
+            [IncidentStatus.Open] = new[] { IncidentStatus.Investigating, IncidentStatus.Declined }.ToFrozenSet(),
+            [IncidentStatus.Investigating] = new[] { IncidentStatus.InProgress, IncidentStatus.Declined }.ToFrozenSet(),
+            [IncidentStatus.InProgress] = new[] { IncidentStatus.Verifying, IncidentStatus.Declined }.ToFrozenSet(),
+            [IncidentStatus.Verifying] = new[] { IncidentStatus.Resolved, IncidentStatus.InProgress }.ToFrozenSet(),
+            [IncidentStatus.Resolved] = new[] { IncidentStatus.InProgress }.ToFrozenSet(),
+            [IncidentStatus.Declined] = new[] { IncidentStatus.InProgress }.ToFrozenSet()
         }.ToFrozenDictionary();
 
     private Incident() { }
@@ -23,11 +25,10 @@ public class Incident
             Title = title,
             Description = description,
             Priority = priority,
-            CreatedAtUtc = context.AtUtc,
             Status = IncidentStatus.Open
         };
 
-        incident.StatusHistory.Add(new IncidentStatusChange(incident, null, IncidentStatus.Open, context.AtUtc));
+        incident.Creation = new IncidentCreation(incident, context.AtUtc);
         return incident;
     }
 
@@ -39,15 +40,57 @@ public class Incident
 
     public IncidentStatus Status { get; private set; }
 
-    public IncidentPriority Priority { get; set; } = IncidentPriority.Medium;
+    public IncidentPriority Priority { get; private set; } = IncidentPriority.Medium;
 
-    public DateTime CreatedAtUtc { get; private set; }
+    public IncidentCreation Creation { get; private set; } = null!;
 
     public List<IncidentStatusChange> StatusHistory { get; private set; } = [];
 
+    public List<IncidentTitleChange> TitleHistory { get; private set; } = [];
+
+    public List<IncidentDescriptionChange> DescriptionHistory { get; private set; } = [];
+
+    public List<IncidentPriorityChange> PriorityHistory { get; private set; } = [];
+
+    public bool UpdateTitle(string newTitle, ChangeContext context)
+    {
+        if (Title == newTitle)
+        {
+            return false;
+        }
+
+        TitleHistory.Add(new IncidentTitleChange(this, Title, newTitle, context.AtUtc));
+        Title = newTitle;
+        return true;
+    }
+
+    public bool UpdateDescription(string newDescription, ChangeContext context)
+    {
+        if (Description == newDescription)
+        {
+            return false;
+        }
+
+        DescriptionHistory.Add(new IncidentDescriptionChange(this, Description, newDescription, context.AtUtc));
+        Description = newDescription;
+        return true;
+    }
+
+    public bool UpdatePriority(IncidentPriority newPriority, ChangeContext context)
+    {
+        if (Priority == newPriority)
+        {
+            return false;
+        }
+
+        PriorityHistory.Add(new IncidentPriorityChange(this, Priority, newPriority, context.AtUtc));
+        Priority = newPriority;
+        return true;
+    }
+
     public void TransitionTo(IncidentStatus next, ChangeContext context)
     {
-        if (!NextStatus.TryGetValue(Status, out var allowed) || next != allowed)
+        if (!AllowedTransitions.TryGetValue(Status, out var allowed) || !allowed.Contains(next))
         {
             throw new InvalidOperationException($"Invalid transition: {Status} -> {next}.");
         }

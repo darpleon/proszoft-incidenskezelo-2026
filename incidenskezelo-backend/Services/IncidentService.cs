@@ -10,9 +10,13 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
     public async Task<List<IncidentResponse>> GetAllAsync(CancellationToken ct)
     {
         return await context.Incidents.AsNoTracking()
-            .OrderByDescending(i => i.CreatedAtUtc)
+            .Include(i => i.Creation)
             .Include(i => i.StatusHistory)
-            .Select(i => ToResponse(i))
+            .Include(i => i.TitleHistory)
+            .Include(i => i.DescriptionHistory)
+            .Include(i => i.PriorityHistory)
+            .OrderByDescending(i => i.Creation.OccurredAtUtc)
+            .Select(i => IncidentResponse.From(i))
             .ToListAsync(ct);
     }
 
@@ -20,8 +24,12 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
     {
         return await context.Incidents.AsNoTracking()
             .Where(i => i.IncidentId == id)
+            .Include(i => i.Creation)
             .Include(i => i.StatusHistory)
-            .Select(i => ToResponse(i))
+            .Include(i => i.TitleHistory)
+            .Include(i => i.DescriptionHistory)
+            .Include(i => i.PriorityHistory)
+            .Select(i => IncidentResponse.From(i))
             .FirstOrDefaultAsync(ct);
     }
 
@@ -38,23 +46,61 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
 
     public async Task<IncidentResponse?> TransitionAsync(int id, IncidentStatus status, CancellationToken ct)
     {
-        var incident = await context.Incidents
-            .Include(i => i.StatusHistory)
-            .FirstOrDefaultAsync(i => i.IncidentId == id, ct);
+        var incident = await LoadWithHistoryAsync(id, ct);
 
         if (incident is null)
         {
             return null;
         }
 
-        var changeContext = new ChangeContext(timeProvider.GetUtcNow().UtcDateTime);
-        incident.TransitionTo(status, changeContext);
+        incident.TransitionTo(status, new ChangeContext(timeProvider.GetUtcNow().UtcDateTime));
         await context.SaveChangesAsync(ct);
 
         return IncidentResponse.From(incident);
     }
 
-    public async Task<List<IncidentStatusChangeResponse>?> GetHistoryAsync(int id, CancellationToken ct)
+    public Task<IncidentResponse?> UpdateTitleAsync(int id, string title, CancellationToken ct)
+    {
+        return ApplyAsync(id, (incident, context) => incident.UpdateTitle(title, context), ct);
+    }
+
+    public Task<IncidentResponse?> UpdateDescriptionAsync(int id, string description, CancellationToken ct)
+    {
+        return ApplyAsync(id, (incident, context) => incident.UpdateDescription(description, context), ct);
+    }
+
+    public Task<IncidentResponse?> UpdatePriorityAsync(int id, IncidentPriority priority, CancellationToken ct)
+    {
+        return ApplyAsync(id, (incident, context) => incident.UpdatePriority(priority, context), ct);
+    }
+
+    private async Task<IncidentResponse?> ApplyAsync(int id, Action<Incident, ChangeContext> update, CancellationToken ct)
+    {
+        var incident = await LoadWithHistoryAsync(id, ct);
+
+        if (incident is null)
+        {
+            return null;
+        }
+
+        update(incident, new ChangeContext(timeProvider.GetUtcNow().UtcDateTime));
+        await context.SaveChangesAsync(ct);
+
+        return IncidentResponse.From(incident);
+    }
+
+    private Task<Incident?> LoadWithHistoryAsync(int id, CancellationToken ct)
+    {
+        return context.Incidents
+            .Include(i => i.Creation)
+            .Include(i => i.StatusHistory)
+            .Include(i => i.TitleHistory)
+            .Include(i => i.DescriptionHistory)
+            .Include(i => i.PriorityHistory)
+            .FirstOrDefaultAsync(i => i.IncidentId == id, ct);
+    }
+
+    public async Task<List<IncidentChangeResponse>?> GetHistoryAsync(int id, CancellationToken ct)
     {
         var exists = await context.Incidents.AsNoTracking()
             .AnyAsync(i => i.IncidentId == id, ct);
@@ -64,28 +110,35 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
             return null;
         }
 
-        return await context.IncidentStatusChanges.AsNoTracking()
+        var created = await context.IncidentCreations.AsNoTracking()
             .Where(c => c.IncidentId == id)
-            .OrderBy(c => c.OccurredAtUtc)
-            .ThenBy(c => c.Id)
-            .Select(c => new IncidentStatusChangeResponse(
-                c.Id, c.IncidentId, c.FromStatus, c.ToStatus, c.OccurredAtUtc))
+            .Select(c => new IncidentChangeResponse("created", c.Id, c.OccurredAtUtc, null, null))
             .ToListAsync(ct);
+
+        var status = await MapKindAsync(context.IncidentStatusChanges.AsNoTracking().Where(c => c.IncidentId == id), "status", ct);
+        var title = await MapKindAsync(context.IncidentTitleChanges.AsNoTracking().Where(c => c.IncidentId == id), "title", ct);
+        var description = await MapKindAsync(context.IncidentDescriptionChanges.AsNoTracking().Where(c => c.IncidentId == id), "description", ct);
+        var priority = await MapKindAsync(context.IncidentPriorityChanges.AsNoTracking().Where(c => c.IncidentId == id), "priority", ct);
+
+        return created
+            .Concat(status)
+            .Concat(title)
+            .Concat(description)
+            .Concat(priority)
+            .OrderBy(e => e.OccurredAtUtc)
+            .ThenBy(e => e.Id)
+            .ToList();
     }
 
-    private static IncidentResponse ToResponse(Incident i)
+    private static async Task<List<IncidentChangeResponse>> MapKindAsync<T>(
+        IQueryable<IncidentChange<T>> changes, string kind, CancellationToken ct)
     {
-        return new IncidentResponse(
-            i.IncidentId,
-            i.Title,
-            i.Description,
-            i.Status,
-            i.Priority,
-            i.CreatedAtUtc,
-            i.StatusHistory.Max(c => (DateTime?)c.OccurredAtUtc) ?? i.CreatedAtUtc,
-            i.StatusHistory
-                .Where(c => c.ToStatus == IncidentStatus.Resolved)
-                .Select(c => (DateTime?)c.OccurredAtUtc)
-                .FirstOrDefault());
+        var rows = await changes
+            .Select(c => new { c.Id, c.OccurredAtUtc, c.OldValue, c.NewValue })
+            .ToListAsync(ct);
+
+        return rows
+            .Select(r => new IncidentChangeResponse(kind, r.Id, r.OccurredAtUtc, r.OldValue?.ToString(), r.NewValue?.ToString()))
+            .ToList();
     }
 }

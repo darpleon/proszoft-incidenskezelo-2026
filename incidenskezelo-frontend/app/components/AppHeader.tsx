@@ -1,7 +1,7 @@
 import { Button, Group, Text } from "@mantine/core";
-import { NavLink } from "react-router";
+import { NavLink, useNavigate } from "react-router";
 import { BackendStatus } from "./BackendStatus";
-import { currentUser } from "~/data/currentUser";
+import useAuth from "~/hooks/useAuth";
 import { getInitials } from "~/lib/initials";
 
 const navItems = [
@@ -10,6 +10,15 @@ const navItems = [
 ];
 
 export function AppHeader() {
+  const { user, isAdmin, logout } = useAuth();
+  const navigate = useNavigate();
+  const visibleNavItems = isAdmin ? [...navItems, { to: "/users", label: "Users" }] : navItems;
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+
   return (
     <header className="flex h-[54px] items-center gap-6 bg-nav-bg px-4 text-nav-text max-[680px]:gap-3 max-[680px]:px-3">
       <Group gap={9} wrap="nowrap">
@@ -22,7 +31,7 @@ export function AppHeader() {
       </Group>
 
       <nav className="flex items-center gap-1">
-        {navItems.map((item) => (
+        {visibleNavItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
@@ -44,18 +53,18 @@ export function AppHeader() {
         <div className="h-6 w-px bg-nav-line max-[680px]:hidden" />
         <Group gap={9} wrap="nowrap">
           <div className="grid size-7 place-items-center rounded-full border border-nav-line bg-nav-bg-2 text-[10px] font-bold text-nav-text-hi">
-            {getInitials(currentUser.name)}
+            {getInitials(user?.name ?? "")}
           </div>
           <div className="flex flex-col leading-tight max-[1080px]:hidden">
             <Text size="sm" fw={500} className="text-nav-text-hi">
-              {currentUser.name}
+              {user?.name}
             </Text>
             <Text size="xs" className="text-nav-dim">
-              {currentUser.role}
+              {user?.role}
             </Text>
           </div>
         </Group>
-        <Button variant="default" size="xs" className="border-nav-line bg-transparent text-nav-text hover:bg-nav-bg-2 hover:text-nav-text-hi">
+        <Button variant="default" size="xs" onClick={handleLogout} className="border-nav-line bg-transparent text-nav-text hover:bg-nav-bg-2 hover:text-nav-text-hi">
           Log out
         </Button>
       </Group>

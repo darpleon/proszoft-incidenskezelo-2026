@@ -1,0 +1,25 @@
+name: Backend tests
+
+on:
+  pull_request:
+    paths:
+      - "incidenskezelo-backend/**"
+      - "incidenskezelo-backend.Tests/**"
+      - ".github/workflows/backend-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Run tests
+        run: dotnet test incidenskezelo-backend/incidenskezelo-backend.slnx

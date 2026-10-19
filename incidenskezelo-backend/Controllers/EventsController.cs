@@ -1,5 +1,6 @@
 using incidenskezelo_backend.Contracts;
 using incidenskezelo_backend.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace incidenskezelo_backend.Controllers;
@@ -19,6 +20,7 @@ public class EventsController : ControllerBase
 
 
     [HttpPost]
+    [AllowAnonymous]
     public async Task<IActionResult> Create(
         [FromBody] CreateEventRequest request,
         CancellationToken cancellationToken)

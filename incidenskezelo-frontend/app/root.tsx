@@ -15,6 +15,7 @@ import {
 
 import type { Route } from "./+types/root";
 import "./app.css";
+import { AuthProvider } from "./context/AuthContext";
 
 const theme = createTheme({
   fontFamily: "Instrument Sans, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif",
@@ -41,7 +42,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <MantineProvider theme={theme} forceColorScheme="light">
-          {children}
+          <AuthProvider>{children}</AuthProvider>
         </MantineProvider>
         <ScrollRestoration />
         <Scripts />

@@ -28,9 +28,7 @@ public class SimulationWorker : BackgroundService
         {
             var simulatedEvent = _simulator.GenerateEvent();
 
-            _logger.LogInformation(
-                "Generated event: {EventId}",
-                simulatedEvent.EventId);
+            _logger.LogInformation("Generated event");
 
             await SendAsync(simulatedEvent, stoppingToken);
 
@@ -47,15 +45,13 @@ public class SimulationWorker : BackgroundService
             using var response = await _incidentApi.SendEventAsync(simulatedEvent, stoppingToken);
 
             _logger.LogInformation(
-                "Sent event {EventId}: {StatusCode}",
-                simulatedEvent.EventId,
+                "Sent event: {StatusCode}",
                 (int)response.StatusCode);
         }
         catch (HttpRequestException exception)
         {
             _logger.LogWarning(
-                "Could not send event {EventId}: {Message}",
-                simulatedEvent.EventId,
+                "Could not send event: {Message}",
                 exception.Message);
         }
     }

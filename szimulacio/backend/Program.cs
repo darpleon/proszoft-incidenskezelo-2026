@@ -1,7 +1,6 @@
 using System.Text.Json.Serialization;
 using backend.Configuration;
 using backend.Services;
-using Simulator.Workers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,9 +12,10 @@ builder.Services.AddControllers()
 builder.Services.AddOpenApi();
 
 builder.Services.AddSingleton<SimulatorService>();
+builder.Services.AddSingleton<ScenarioCatalog>();
+builder.Services.AddSingleton<ScenarioRunner>();
 builder.Services.Configure<IncidentApiOptions>(builder.Configuration.GetSection("IncidentApi"));
 builder.Services.AddHttpClient<IncidentApiClient>();
-builder.Services.AddHostedService<SimulationWorker>();
 
 var app = builder.Build();
 

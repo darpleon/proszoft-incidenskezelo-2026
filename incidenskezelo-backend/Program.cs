@@ -5,6 +5,7 @@ using incidenskezelo_backend.Data;
 using incidenskezelo_backend.Configuration;
 using incidenskezelo_backend.Models;
 using incidenskezelo_backend.Services;
+using incidenskezelo_backend.Services.AI;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -40,6 +41,7 @@ builder.Services.Configure<GeminiOptions>(
     builder.Configuration.GetSection("Gemini"));
 
 builder.Services.AddHttpClient<IAiService, GeminiService>();
+builder.Services.AddScoped<IIncidentAnalysisService, IncidentAnalysisService>();
 builder.Services.AddScoped<EventService>();
 builder.Services.AddScoped<IIncidentService, IncidentService>();
 

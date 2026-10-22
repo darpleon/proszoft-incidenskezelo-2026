@@ -1,6 +1,5 @@
 ﻿
-using incidenskezelo_backend.Configuration;
-using incidenskezelo_backend.Services;
+using incidenskezelo_backend.Services.AI;
 using Microsoft.AspNetCore.Mvc;
 
 namespace incidenskezelo_backend.Controllers;
@@ -9,37 +8,26 @@ namespace incidenskezelo_backend.Controllers;
 [Route("api/[controller]")]
 public class GeminiController : ControllerBase
 {
-    private readonly IAiService _aiService;
+    private readonly IIncidentAnalysisService _incidentAnalysisService;
 
-    public GeminiController(IAiService aiService)
+    public GeminiController(IIncidentAnalysisService incidentAnalysisService)
     {
-        _aiService = aiService;
+        _incidentAnalysisService = incidentAnalysisService;
     }
 
     //API endpoint az incidens elemzéséhez, itt ID alapján elemez
     [HttpPost("analyze/{incidentId}")]
     public async Task<IActionResult> Analyze(
-        string incidentId,
+        Guid incidentId,
         CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(incidentId))
+        if (incidentId == Guid.Empty)
         {
             return BadRequest("Az incidens azonosítója kötelező.");
         }
 
-        var prompt = $"""
-            {IncidentAnalysisPrompt.SystemPrompt}
-
-            Az elemzendő incidens azonosítója:
-            {incidentId}
-
-            Jelenleg még nem kaptál adatbázisból származó
-            incidensadatokat. Ne következtess az incidens
-            tartalmára pusztán az azonosítóból.
-            """;
-
-        var result = await _aiService.GenerateAsync(
-            prompt,
+        var result = await _incidentAnalysisService.AnalyzeAsync(
+            incidentId,
             cancellationToken);
 
         return Ok(new

@@ -1,5 +1,5 @@
-import { Menu, UnstyledButton } from "@mantine/core";
-import { IconCheck, IconChevronDown } from "@tabler/icons-react";
+import { Menu } from "@mantine/core";
+import { DetailMenu, DetailMenuItem } from "./DetailMenu";
 import type { IUser } from "~/interfaces/IUser";
 import { getInitials } from "~/lib/initials";
 
@@ -25,39 +25,33 @@ export function AssigneeMenu({ users, assigneeUserId, onChange }: AssigneeMenuPr
   const assignee = users.find((user) => user.userId === assigneeUserId);
 
   return (
-    <Menu position="bottom-start" width={218} shadow="md">
-      <Menu.Target>
-        <UnstyledButton className="-mx-2 -my-[3px] flex items-center gap-[7px] rounded px-2 py-[3px] text-sm font-semibold tracking-[-0.015em] hover:bg-line">
-          {assignee ? (
-            <>
-              <Avatar name={getInitials(assignee.name)} active />
-              {assignee.name}
-            </>
-          ) : (
-            <span className="text-high">Unassigned</span>
-          )}
-          <IconChevronDown size={12} className="text-text-3" />
-        </UnstyledButton>
-      </Menu.Target>
-
-      <Menu.Dropdown>
-        <Menu.Label>Assign to</Menu.Label>
-        {users.map((user) => (
-          <Menu.Item
-            key={user.userId}
-            leftSection={<Avatar name={getInitials(user.name)} />}
-            rightSection={user.userId === assigneeUserId && <IconCheck size={14} className="text-petrol" />}
-            className={user.userId === assigneeUserId ? "font-semibold" : undefined}
-            onClick={() => onChange(user.userId)}
-          >
-            {user.name}
-          </Menu.Item>
-        ))}
-        <Menu.Divider />
-        <Menu.Item leftSection={<Avatar name="–" />} disabled={assigneeUserId === null} onClick={() => onChange(null)}>
-          Remove assignee
-        </Menu.Item>
-      </Menu.Dropdown>
-    </Menu>
+    <DetailMenu
+      label="Assign to"
+      trigger={
+        assignee ? (
+          <>
+            <Avatar name={getInitials(assignee.name)} active />
+            {assignee.name}
+          </>
+        ) : (
+          <span className="text-high">Unassigned</span>
+        )
+      }
+    >
+      {users.map((user) => (
+        <DetailMenuItem
+          key={user.userId}
+          selected={user.userId === assigneeUserId}
+          leftSection={<Avatar name={getInitials(user.name)} />}
+          onClick={() => onChange(user.userId)}
+        >
+          {user.name}
+        </DetailMenuItem>
+      ))}
+      <Menu.Divider />
+      <DetailMenuItem leftSection={<Avatar name="–" />} disabled={assigneeUserId === null} onClick={() => onChange(null)}>
+        Remove assignee
+      </DetailMenuItem>
+    </DetailMenu>
   );
 }

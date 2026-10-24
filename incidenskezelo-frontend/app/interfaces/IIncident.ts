@@ -14,3 +14,5 @@ export interface IIncident {
   updatedAtUtc: string;
   closedAtUtc: string | null;
 }
+
+export type IncidentChanges = Partial<Pick<IIncident, "status" | "priority" | "assigneeUserId">>;

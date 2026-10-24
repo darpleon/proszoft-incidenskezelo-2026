@@ -1,26 +1,21 @@
 import { Text, Title } from "@mantine/core";
 import { AssigneeMenu } from "./AssigneeMenu";
 import { DetailField } from "./DetailField";
-import { StatusRing } from "./StatusRing";
+import { PriorityMenu } from "./PriorityMenu";
+import { StatusMenu } from "./StatusMenu";
 import { users } from "~/data/users";
 import type { IEvent } from "~/interfaces/IEvent";
-import type { IIncident } from "~/interfaces/IIncident";
+import type { IIncident, IncidentChanges } from "~/interfaces/IIncident";
 import { formatAge } from "~/lib/format";
-import {
-  isOpen,
-  priorityLabels,
-  priorityTextColors,
-  statusLabels,
-  statusTextColors,
-} from "~/lib/labels";
+import { isOpen } from "~/lib/labels";
 
 type IncidentDetailHeaderProps = {
   incident: IIncident;
   events: IEvent[];
-  onAssigneeChange: (userId: number | null) => void;
+  onChange: (changes: IncidentChanges) => void;
 };
 
-export function IncidentDetailHeader({ incident, events, onAssigneeChange }: IncidentDetailHeaderProps) {
+export function IncidentDetailHeader({ incident, events, onChange }: IncidentDetailHeaderProps) {
   const duplicateCount = events.filter((event) => event.processingState === "Duplicate").length;
   const linkedCount = events.length - duplicateCount;
 
@@ -35,19 +30,15 @@ export function IncidentDetailHeader({ incident, events, onAssigneeChange }: Inc
 
       <div className="mt-[22px] flex flex-wrap items-start gap-y-3">
         <DetailField label="Status">
-          <StatusRing colorClass={statusTextColors[incident.status]} filled={incident.status !== "New"} />
-          {statusLabels[incident.status]}
+          <StatusMenu status={incident.status} onChange={(status) => onChange({ status })} />
         </DetailField>
 
         <DetailField label="Priority">
-          <span className={`flex items-center gap-[7px] ${priorityTextColors[incident.priority]}`}>
-            <StatusRing colorClass={priorityTextColors[incident.priority]} />
-            {priorityLabels[incident.priority]}
-          </span>
+          <PriorityMenu priority={incident.priority} onChange={(priority) => onChange({ priority })} />
         </DetailField>
 
         <DetailField label="Assignee">
-          <AssigneeMenu users={users} assigneeUserId={incident.assigneeUserId} onChange={onAssigneeChange} />
+          <AssigneeMenu users={users} assigneeUserId={incident.assigneeUserId} onChange={(assigneeUserId) => onChange({ assigneeUserId })} />
         </DetailField>
 
         <DetailField label="Open for">

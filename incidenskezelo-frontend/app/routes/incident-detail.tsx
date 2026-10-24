@@ -11,7 +11,7 @@ import { events } from "~/data/events";
 import { incidents } from "~/data/incidents";
 import useAuth from "~/hooks/useAuth";
 import type { IComment } from "~/interfaces/IComment";
-import type { IIncident } from "~/interfaces/IIncident";
+import type { IIncident, IncidentChanges } from "~/interfaces/IIncident";
 import type { Route } from "./+types/incident-detail";
 
 function TabCount({ count }: { count: number }) {
@@ -66,16 +66,19 @@ export default function IncidentDetail({ params }: Route.ComponentProps) {
     );
   };
 
-  const changeAssignee = (assigneeUserId: number | null) => {
-    const updatedAtUtc = new Date().toISOString();
+  const updateIncident = (changes: IncidentChanges) => {
+    const now = new Date().toISOString();
+    const closedAtUtc = changes.status ? (changes.status === "Closed" ? now : null) : incident.closedAtUtc;
     setAllIncidents((current) =>
-      current.map((item) => (item.incidentId === incident.incidentId ? { ...item, assigneeUserId, updatedAtUtc } : item)),
+      current.map((item) =>
+        item.incidentId === incident.incidentId ? { ...item, ...changes, closedAtUtc, updatedAtUtc: now } : item,
+      ),
     );
   };
 
   return (
     <>
-      <IncidentDetailHeader incident={incident} events={incidentEvents} onAssigneeChange={changeAssignee} />
+      <IncidentDetailHeader incident={incident} events={incidentEvents} onChange={updateIncident} />
 
       <Tabs key={incident.incidentId} defaultValue="overview" color="#0f717d" className="flex min-h-0 flex-1 flex-col">
         <Tabs.List className="mx-[22px] mt-[22px] max-[680px]:mx-4">

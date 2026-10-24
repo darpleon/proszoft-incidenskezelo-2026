@@ -84,6 +84,14 @@ public class UsersController : ControllerBase
     }
 
 
+    [HttpGet("assignable")]
+    [Authorize(Policy = AuthPolicies.CanHandleIncidents)]
+    public async Task<IActionResult> GetAssignable(CancellationToken cancellationToken)
+    {
+        return Ok(await _userService.GetAssignableAsync(cancellationToken));
+    }
+
+
     [HttpGet("{userId:int}")]
     [Authorize(Policy = AuthPolicies.AdminOnly)]
     public async Task<IActionResult> GetById(int userId, CancellationToken cancellationToken)

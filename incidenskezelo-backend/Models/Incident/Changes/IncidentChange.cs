@@ -10,12 +10,17 @@ public abstract class IncidentChange
 
     public DateTime OccurredAtUtc { get; private set; }
 
+    public int? ActorUserId { get; private set; }
+
+    public User? Actor { get; private set; }
+
     protected IncidentChange() { }
 
-    protected IncidentChange(Incident incident, DateTime at)
+    protected IncidentChange(Incident incident, ChangeContext context)
     {
         Incident = incident;
-        OccurredAtUtc = at;
+        OccurredAtUtc = context.AtUtc;
+        ActorUserId = context.ActorUserId;
     }
 }
 
@@ -27,8 +32,8 @@ public abstract class IncidentChange<T> : IncidentChange
 
     protected IncidentChange() { }
 
-    protected IncidentChange(Incident incident, T old, T @new, DateTime at)
-        : base(incident, at)
+    protected IncidentChange(Incident incident, T old, T @new, ChangeContext context)
+        : base(incident, context)
     {
         OldValue = old;
         NewValue = @new;

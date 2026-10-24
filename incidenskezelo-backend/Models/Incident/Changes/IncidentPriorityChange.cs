@@ -4,8 +4,8 @@ public class IncidentPriorityChange : IncidentChange<IncidentPriority>
 {
     private IncidentPriorityChange() { }
 
-    internal IncidentPriorityChange(Incident incident, IncidentPriority oldPriority, IncidentPriority newPriority, DateTime at)
-        : base(incident, oldPriority, newPriority, at)
+    internal IncidentPriorityChange(Incident incident, IncidentPriority oldPriority, IncidentPriority newPriority, ChangeContext context)
+        : base(incident, oldPriority, newPriority, context)
     {
     }
 }

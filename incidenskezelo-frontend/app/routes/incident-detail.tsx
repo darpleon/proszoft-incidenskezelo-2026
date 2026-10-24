@@ -1,12 +1,28 @@
 import { Tabs, Text } from "@mantine/core";
+import { useState } from "react";
+import { CommentForm } from "~/components/CommentForm";
+import { CommentList } from "~/components/CommentList";
 import { IncidentDetailHeader } from "~/components/IncidentDetailHeader";
 import { EventsTable } from "~/components/EventsTable";
 import { IncidentOverview } from "~/components/IncidentOverview";
+import { comments } from "~/data/comments";
 import { events } from "~/data/events";
 import { incidents } from "~/data/incidents";
+import useAuth from "~/hooks/useAuth";
+import type { IComment } from "~/interfaces/IComment";
 import type { Route } from "./+types/incident-detail";
 
+function TabCount({ count }: { count: number }) {
+  return (
+    <span className="grid h-[17px] min-w-[17px] place-items-center rounded-full bg-[#eff2f1] px-[5px] text-[10px] font-semibold text-text-2">
+      {count}
+    </span>
+  );
+}
+
 export default function IncidentDetail({ params }: Route.ComponentProps) {
+  const { user } = useAuth();
+  const [allComments, setAllComments] = useState<IComment[]>(comments);
   const incident = incidents.find((item) => item.incidentId === Number(params.incidentId));
 
   if (!incident) {
@@ -21,6 +37,24 @@ export default function IncidentDetail({ params }: Route.ComponentProps) {
     .filter((event) => event.incidentId === incident.incidentId)
     .sort((a, b) => a.occurredAtUtc.localeCompare(b.occurredAtUtc));
 
+  const incidentComments = allComments
+    .filter((comment) => comment.incidentId === incident.incidentId)
+    .sort((a, b) => a.createdAtUtc.localeCompare(b.createdAtUtc));
+
+  const addComment = (body: string) => {
+    if (!user) return;
+
+    const newComment: IComment = {
+      commentId: Date.now(),
+      incidentId: incident.incidentId,
+      authorUserId: user.userId,
+      authorName: user.name,
+      body,
+      createdAtUtc: new Date().toISOString(),
+    };
+    setAllComments((current) => [...current, newComment]);
+  };
+
   return (
     <>
       <IncidentDetailHeader incident={incident} events={incidentEvents} />
@@ -28,15 +62,11 @@ export default function IncidentDetail({ params }: Route.ComponentProps) {
       <Tabs key={incident.incidentId} defaultValue="overview" color="#0f717d" className="flex min-h-0 flex-1 flex-col">
         <Tabs.List className="mx-[22px] mt-[22px] max-[680px]:mx-4">
           <Tabs.Tab value="overview">Overview</Tabs.Tab>
-          <Tabs.Tab
-            value="events"
-            rightSection={
-              <span className="grid h-[17px] min-w-[17px] place-items-center rounded-full bg-[#eff2f1] px-[5px] text-[10px] font-semibold text-text-2">
-                {incidentEvents.length}
-              </span>
-            }
-          >
+          <Tabs.Tab value="events" rightSection={<TabCount count={incidentEvents.length} />}>
             Events
+          </Tabs.Tab>
+          <Tabs.Tab value="comments" rightSection={<TabCount count={incidentComments.length} />}>
+            Comments
           </Tabs.Tab>
         </Tabs.List>
 
@@ -46,6 +76,10 @@ export default function IncidentDetail({ params }: Route.ComponentProps) {
           </Tabs.Panel>
           <Tabs.Panel value="events">
             <EventsTable events={incidentEvents} />
+          </Tabs.Panel>
+          <Tabs.Panel value="comments">
+            <CommentList comments={incidentComments} currentUserId={user?.userId} />
+            <CommentForm onSubmit={addComment} />
           </Tabs.Panel>
         </div>
       </Tabs>

@@ -1,11 +1,11 @@
 import { Text, Title } from "@mantine/core";
+import { AssigneeMenu } from "./AssigneeMenu";
 import { DetailField } from "./DetailField";
 import { StatusRing } from "./StatusRing";
 import { users } from "~/data/users";
 import type { IEvent } from "~/interfaces/IEvent";
 import type { IIncident } from "~/interfaces/IIncident";
 import { formatAge } from "~/lib/format";
-import { getInitials } from "~/lib/initials";
 import {
   isOpen,
   priorityLabels,
@@ -17,10 +17,10 @@ import {
 type IncidentDetailHeaderProps = {
   incident: IIncident;
   events: IEvent[];
+  onAssigneeChange: (userId: number | null) => void;
 };
 
-export function IncidentDetailHeader({ incident, events }: IncidentDetailHeaderProps) {
-  const assignee = users.find((user) => user.userId === incident.assigneeUserId);
+export function IncidentDetailHeader({ incident, events, onAssigneeChange }: IncidentDetailHeaderProps) {
   const duplicateCount = events.filter((event) => event.processingState === "Duplicate").length;
   const linkedCount = events.length - duplicateCount;
 
@@ -47,16 +47,7 @@ export function IncidentDetailHeader({ incident, events }: IncidentDetailHeaderP
         </DetailField>
 
         <DetailField label="Assignee">
-          {assignee ? (
-            <>
-              <i className="grid size-[21px] place-items-center rounded-full bg-petrol-bg text-[9px] font-bold text-petrol not-italic">
-                {getInitials(assignee.name)}
-              </i>
-              {assignee.name}
-            </>
-          ) : (
-            <span className="text-high">Unassigned</span>
-          )}
+          <AssigneeMenu users={users} assigneeUserId={incident.assigneeUserId} onChange={onAssigneeChange} />
         </DetailField>
 
         <DetailField label="Open for">

@@ -30,6 +30,10 @@ namespace incidenskezelo_backend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("EventId"));
 
+                    b.Property<string>("CorrelationKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<string>("EventType")
                         .IsRequired()
                         .HasMaxLength(50)

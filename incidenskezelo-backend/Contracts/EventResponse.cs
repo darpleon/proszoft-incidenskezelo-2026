@@ -21,4 +21,6 @@ public class EventResponse
     public string? Summary { get; set; }
 
     public string? PayloadJson { get; set; }
+
+    public string? CorrelationKey { get; set; }
 }

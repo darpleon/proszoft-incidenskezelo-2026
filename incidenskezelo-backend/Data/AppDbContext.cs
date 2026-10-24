@@ -67,6 +67,7 @@ namespace incidenskezelo_backend.Data
                     table.HasCheckConstraint("CK_Event_PayloadJson", "[PayloadJson] IS NULL OR ISJSON([PayloadJson]) = 1");
                 });
                 entity.Property(evt => evt.SourceEventId).HasMaxLength(100);
+                entity.Property(evt => evt.CorrelationKey).HasMaxLength(100).IsRequired(false);
                 entity.Property(evt => evt.Summary).HasMaxLength(500);
                 entity.Property(evt => evt.OccurredAtUtc).HasPrecision(3);
                 entity.Property(evt => evt.ReceivedAtUtc).HasPrecision(3);

@@ -1,18 +1,25 @@
-export type IncidentStatus = "New" | "Investigating" | "InProgress" | "Resolved" | "Closed";
+export type IncidentStatus = "Open" | "Investigating" | "InProgress" | "Verifying" | "Resolved" | "Declined";
 
 export type IncidentPriority = "Low" | "Medium" | "High" | "Critical";
 
+export interface IIncidentRevisions {
+  title: number;
+  description: number;
+  priority: number;
+  status: number;
+  assignee: number;
+}
+
 export interface IIncident {
-  incidentId: number;
+  id: string;
   title: string;
   description: string;
   status: IncidentStatus;
   priority: IncidentPriority;
-  serviceId: number;
   assigneeUserId: number | null;
+  assigneeName: string | null;
   createdAtUtc: string;
   updatedAtUtc: string;
   closedAtUtc: string | null;
+  revisions: IIncidentRevisions;
 }
-
-export type IncidentChanges = Partial<Pick<IIncident, "status" | "priority" | "assigneeUserId">>;

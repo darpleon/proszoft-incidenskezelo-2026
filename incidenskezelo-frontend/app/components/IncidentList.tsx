@@ -1,5 +1,6 @@
 import { SegmentedControl, Text, Title } from "@mantine/core";
 import { useState } from "react";
+import { EmptyState } from "./EmptyState";
 import { IncidentListItem } from "./IncidentListItem";
 import useAuth from "~/hooks/useAuth";
 import type { IIncident } from "~/interfaces/IIncident";
@@ -7,11 +8,12 @@ import { isOpen } from "~/lib/labels";
 
 type IncidentListProps = {
   incidents: IIncident[];
+  loadError: boolean;
 };
 
 type OwnerFilter = "all" | "mine";
 
-export function IncidentList({ incidents }: IncidentListProps) {
+export function IncidentList({ incidents, loadError }: IncidentListProps) {
   const [ownerFilter, setOwnerFilter] = useState<OwnerFilter>("all");
   const { user } = useAuth();
 
@@ -43,13 +45,10 @@ export function IncidentList({ incidents }: IncidentListProps) {
 
       <div className="min-h-0 flex-1 overflow-y-auto pb-2">
         {visibleIncidents.map((incident) => (
-          <IncidentListItem key={incident.incidentId} incident={incident} />
+          <IncidentListItem key={incident.id} incident={incident} />
         ))}
-        {visibleIncidents.length === 0 && (
-          <Text size="sm" className="px-4 py-6 text-center text-text-3">
-            No incidents to show.
-          </Text>
-        )}
+        {loadError && <EmptyState>The incidents could not be loaded.</EmptyState>}
+        {!loadError && visibleIncidents.length === 0 && <EmptyState>No incidents to show.</EmptyState>}
       </div>
     </section>
   );

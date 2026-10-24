@@ -1,25 +1,24 @@
 import { Menu } from "@mantine/core";
 import { DetailMenu, DetailMenuItem } from "./DetailMenu";
 import { UserAvatar } from "./UserAvatar";
-import type { IUser } from "~/interfaces/IUser";
+import type { IAssignableUser } from "~/interfaces/IUser";
 
 type AssigneeMenuProps = {
-  users: IUser[];
+  users: IAssignableUser[];
   assigneeUserId: number | null;
+  assigneeName: string | null;
   onChange: (userId: number | null) => void;
 };
 
-export function AssigneeMenu({ users, assigneeUserId, onChange }: AssigneeMenuProps) {
-  const assignee = users.find((user) => user.userId === assigneeUserId);
-
+export function AssigneeMenu({ users, assigneeUserId, assigneeName, onChange }: AssigneeMenuProps) {
   return (
     <DetailMenu
       label="Assign to"
       trigger={
-        assignee ? (
+        assigneeName ? (
           <>
-            <UserAvatar name={assignee.name} />
-            {assignee.name}
+            <UserAvatar name={assigneeName} />
+            {assigneeName}
           </>
         ) : (
           <span className="text-high">Unassigned</span>

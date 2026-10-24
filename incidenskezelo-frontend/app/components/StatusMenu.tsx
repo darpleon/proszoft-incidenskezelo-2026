@@ -2,17 +2,27 @@ import { Menu } from "@mantine/core";
 import { DetailMenu, DetailMenuItem } from "./DetailMenu";
 import { IncidentStatusRing } from "./StatusRing";
 import type { IncidentStatus } from "~/interfaces/IIncident";
-import { statusLabels } from "~/lib/labels";
+import { allowedNextStatuses, statusLabels } from "~/lib/labels";
 
 type StatusMenuProps = {
   status: IncidentStatus;
   onChange: (status: IncidentStatus) => void;
 };
 
-const workingStatuses: IncidentStatus[] = ["New", "Investigating", "InProgress", "Resolved"];
+const workingStatuses: IncidentStatus[] = ["Open", "Investigating", "InProgress", "Verifying", "Resolved"];
 
 export function StatusMenu({ status, onChange }: StatusMenuProps) {
-  const canClose = status === "Resolved" || status === "Closed";
+  const renderItem = (option: IncidentStatus) => (
+    <DetailMenuItem
+      key={option}
+      selected={option === status}
+      disabled={option !== status && !allowedNextStatuses[status].includes(option)}
+      leftSection={<IncidentStatusRing status={option} />}
+      onClick={() => onChange(option)}
+    >
+      {statusLabels[option]}
+    </DetailMenuItem>
+  );
 
   return (
     <DetailMenu
@@ -24,21 +34,9 @@ export function StatusMenu({ status, onChange }: StatusMenuProps) {
         </>
       }
     >
-      {workingStatuses.map((option) => (
-        <DetailMenuItem key={option} selected={option === status} leftSection={<IncidentStatusRing status={option} />} onClick={() => onChange(option)}>
-          {statusLabels[option]}
-        </DetailMenuItem>
-      ))}
+      {workingStatuses.map(renderItem)}
       <Menu.Divider />
-      {canClose ? (
-        <DetailMenuItem selected={status === "Closed"} leftSection={<IncidentStatusRing status="Closed" />} onClick={() => onChange("Closed")}>
-          {statusLabels.Closed}
-        </DetailMenuItem>
-      ) : (
-        <p className="m-[3px] rounded bg-[#fbf3e4] px-[9px] py-[7px] text-xs leading-snug text-text-2">
-          An incident can only be closed once it is resolved.
-        </p>
-      )}
+      {renderItem("Declined")}
     </DetailMenu>
   );
 }

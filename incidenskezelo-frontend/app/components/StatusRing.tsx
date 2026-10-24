@@ -15,7 +15,7 @@ export function StatusRing({ colorClass, filled = true }: StatusRingProps) {
 }
 
 export function IncidentStatusRing({ status }: { status: IncidentStatus }) {
-  return <StatusRing colorClass={statusTextColors[status]} filled={status !== "New"} />;
+  return <StatusRing colorClass={statusTextColors[status]} filled={status !== "Open"} />;
 }
 
 export function PriorityRing({ priority }: { priority: IncidentPriority }) {

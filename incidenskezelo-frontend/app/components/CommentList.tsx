@@ -1,3 +1,7 @@
+import { ActionIcon } from "@mantine/core";
+import { IconPencil } from "@tabler/icons-react";
+import { useState } from "react";
+import { CommentForm } from "./CommentForm";
 import type { IComment } from "~/interfaces/IComment";
 import { formatAge } from "~/lib/format";
 import { getInitials } from "~/lib/initials";
@@ -5,9 +9,17 @@ import { getInitials } from "~/lib/initials";
 type CommentListProps = {
   comments: IComment[];
   currentUserId: number | undefined;
+  onEdit: (commentId: number, body: string) => void;
 };
 
-export function CommentList({ comments, currentUserId }: CommentListProps) {
+export function CommentList({ comments, currentUserId, onEdit }: CommentListProps) {
+  const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
+
+  const saveEdit = (commentId: number, body: string) => {
+    onEdit(commentId, body);
+    setEditingCommentId(null);
+  };
+
   if (comments.length === 0) {
     return (
       <div className="py-7 text-sm text-text-3">
@@ -19,25 +31,55 @@ export function CommentList({ comments, currentUserId }: CommentListProps) {
 
   return (
     <ul>
-      {comments.map((comment) => (
-        <li key={comment.commentId} className="flex gap-3 border-t border-[#eff2f1] py-3.5 first:border-t-0 first:pt-0">
-          <i className="grid size-7 shrink-0 place-items-center rounded-full bg-petrol-bg text-[10px] font-bold text-petrol not-italic">
-            {getInitials(comment.authorName)}
-          </i>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-baseline gap-2">
-              <span className="text-sm font-semibold">
-                {comment.authorName}
-                {comment.authorUserId === currentUserId && <span className="font-normal text-text-3"> (you)</span>}
-              </span>
-              <span className="text-[11.5px] text-text-3" suppressHydrationWarning>
-                {formatAge(comment.createdAtUtc)}
-              </span>
+      {comments.map((comment) => {
+        const isOwn = comment.authorUserId === currentUserId;
+        const isEditing = comment.commentId === editingCommentId;
+
+        return (
+          <li key={comment.commentId} className="flex gap-3 border-t border-[#eff2f1] py-3.5 first:border-t-0 first:pt-0">
+            <i className="grid size-7 shrink-0 place-items-center rounded-full bg-petrol-bg text-[10px] font-bold text-petrol not-italic">
+              {getInitials(comment.authorName)}
+            </i>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-baseline gap-2">
+                <span className="text-sm font-semibold">
+                  {comment.authorName}
+                  {isOwn && <span className="font-normal text-text-3"> (you)</span>}
+                </span>
+                <span className="text-[11.5px] text-text-3" suppressHydrationWarning>
+                  {formatAge(comment.createdAtUtc)}
+                  {comment.editedAtUtc && ", edited"}
+                </span>
+                {isOwn && !isEditing && (
+                  <ActionIcon
+                    variant="subtle"
+                    color="gray"
+                    size="sm"
+                    className="ml-auto self-center"
+                    aria-label="Edit comment"
+                    title="Edit comment"
+                    onClick={() => setEditingCommentId(comment.commentId)}
+                  >
+                    <IconPencil size={14} />
+                  </ActionIcon>
+                )}
+              </div>
+              {isEditing ? (
+                <div className="mt-2">
+                  <CommentForm
+                    initialBody={comment.body}
+                    submitLabel="Save"
+                    onSubmit={(body) => saveEdit(comment.commentId, body)}
+                    onCancel={() => setEditingCommentId(null)}
+                  />
+                </div>
+              ) : (
+                <p className="mt-[3px] text-sm leading-relaxed break-words whitespace-pre-wrap">{comment.body}</p>
+              )}
             </div>
-            <p className="mt-[3px] text-sm leading-relaxed break-words whitespace-pre-wrap">{comment.body}</p>
-          </div>
-        </li>
-      ))}
+          </li>
+        );
+      })}
     </ul>
   );
 }

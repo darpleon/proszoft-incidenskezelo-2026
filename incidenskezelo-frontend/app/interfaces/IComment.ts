@@ -5,4 +5,5 @@ export interface IComment {
   authorName: string;
   body: string;
   createdAtUtc: string;
+  editedAtUtc: string | null;
 }

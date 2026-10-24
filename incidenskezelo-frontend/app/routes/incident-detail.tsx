@@ -1,4 +1,5 @@
 import { Tabs, Text } from "@mantine/core";
+import { IconMessage } from "@tabler/icons-react";
 import { useState } from "react";
 import { CommentForm } from "~/components/CommentForm";
 import { CommentList } from "~/components/CommentList";
@@ -51,8 +52,16 @@ export default function IncidentDetail({ params }: Route.ComponentProps) {
       authorName: user.name,
       body,
       createdAtUtc: new Date().toISOString(),
+      editedAtUtc: null,
     };
     setAllComments((current) => [...current, newComment]);
+  };
+
+  const editComment = (commentId: number, body: string) => {
+    const editedAtUtc = new Date().toISOString();
+    setAllComments((current) =>
+      current.map((comment) => (comment.commentId === commentId ? { ...comment, body, editedAtUtc } : comment)),
+    );
   };
 
   return (
@@ -65,7 +74,7 @@ export default function IncidentDetail({ params }: Route.ComponentProps) {
           <Tabs.Tab value="events" rightSection={<TabCount count={incidentEvents.length} />}>
             Events
           </Tabs.Tab>
-          <Tabs.Tab value="comments" rightSection={<TabCount count={incidentComments.length} />}>
+          <Tabs.Tab value="comments" leftSection={<IconMessage size={14} />} rightSection={<TabCount count={incidentComments.length} />}>
             Comments
           </Tabs.Tab>
         </Tabs.List>
@@ -78,8 +87,10 @@ export default function IncidentDetail({ params }: Route.ComponentProps) {
             <EventsTable events={incidentEvents} />
           </Tabs.Panel>
           <Tabs.Panel value="comments">
-            <CommentList comments={incidentComments} currentUserId={user?.userId} />
-            <CommentForm onSubmit={addComment} />
+            <CommentList comments={incidentComments} currentUserId={user?.userId} onEdit={editComment} />
+            <div className="mt-4 border-t border-line pt-4">
+              <CommentForm onSubmit={addComment} />
+            </div>
           </Tabs.Panel>
         </div>
       </Tabs>

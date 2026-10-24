@@ -32,7 +32,7 @@ public class EventServiceTests
     [TestMethod]
     public async Task IngestAsync_ValidEvent_StoresEvent()
     {
-        var request = CreateRequest(sourceEventId: "evt-1", serviceCode: "orders-api");
+        var request = CreateRequest(serviceCode: "orders-api");
 
         var result = await _eventService.IngestAsync(request, CancellationToken.None);
 
@@ -40,7 +40,7 @@ public class EventServiceTests
         Assert.AreEqual(1, _dbContext.Events.Count());
 
         var stored = _dbContext.Events.Single();
-        Assert.AreEqual("evt-1", stored.SourceEventId);
+        Assert.AreEqual(64, stored.SourceEventId.Length);
         Assert.AreEqual(EventType.HighLatency, stored.EventType);
         Assert.AreEqual(Severity.Warning, stored.Severity);
         Assert.AreNotEqual(default, stored.ReceivedAtUtc);
@@ -48,11 +48,11 @@ public class EventServiceTests
 
 
     [TestMethod]
-    public async Task IngestAsync_SameSourceEventIdTwice_StoresOnlyOneEvent()
+    public async Task IngestAsync_SameContentTwice_StoresOnlyOneEvent()
     {
-        var first = await _eventService.IngestAsync(CreateRequest(sourceEventId: "evt-1"), CancellationToken.None);
+        var first = await _eventService.IngestAsync(CreateRequest(), CancellationToken.None);
 
-        var second = await _eventService.IngestAsync(CreateRequest(sourceEventId: "evt-1"), CancellationToken.None);
+        var second = await _eventService.IngestAsync(CreateRequest(), CancellationToken.None);
 
         Assert.AreEqual(EventIngestStatus.Created, first.Status);
         Assert.AreEqual(EventIngestStatus.AlreadyReceived, second.Status);
@@ -99,14 +99,12 @@ public class EventServiceTests
 
 
     private static CreateEventRequest CreateRequest(
-        string sourceEventId = "evt-1",
         string serviceCode = "orders-api",
         string eventType = "HighLatency",
         string severity = "Warning")
     {
         return new CreateEventRequest
         {
-            SourceEventId = sourceEventId,
             ServiceCode = serviceCode,
             EventType = eventType,
             Severity = severity,

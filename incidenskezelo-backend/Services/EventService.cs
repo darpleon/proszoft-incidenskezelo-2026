@@ -3,6 +3,10 @@ using incidenskezelo_backend.Data;
 using incidenskezelo_backend.Models;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
+using System.Text.Json;
+using System;
+using System.Linq;
 
 namespace incidenskezelo_backend.Services;
 
@@ -42,10 +46,12 @@ public class EventService
             return new EventIngestResult(EventIngestStatus.Invalid, null, $"Unknown severity '{request.Severity}'.");
         }
 
-        var existing = await FindBySourceIdAsync(request.SourceEventId, cancellationToken);
+        var contentHash = CreateContentHash(request, eventType, severity);
+
+        var existing = await FindBySourceIdAsync(contentHash, cancellationToken);
         if (existing is not null)
         {
-            _logger.LogInformation("Duplicate event {SourceEventId} ignored", request.SourceEventId);
+            _logger.LogInformation("Duplicate event {ContentHash} ignored", contentHash);
             return new EventIngestResult(EventIngestStatus.AlreadyReceived, existing, null);
         }
 
@@ -59,7 +65,8 @@ public class EventService
 
         var newEvent = new Event
         {
-            SourceEventId = request.SourceEventId,
+            SourceEventId = contentHash,
+            CorrelationKey = request.CorrelationKey,
             ServiceId = service.ServiceId,
             EventType = eventType,
             Severity = severity,
@@ -78,17 +85,88 @@ public class EventService
         catch (DbUpdateException exception) when (IsDuplicateKey(exception))
         {
             _dbContext.Entry(newEvent).State = EntityState.Detached;
-            var concurrentDuplicate = await FindBySourceIdAsync(request.SourceEventId, cancellationToken);
+            var concurrentDuplicate = await FindBySourceIdAsync(contentHash, cancellationToken);
             return new EventIngestResult(EventIngestStatus.AlreadyReceived, concurrentDuplicate, null);
         }
 
         _logger.LogInformation(
-            "Event {EventId} stored ({SourceEventId}, {ServiceCode}, {EventType})",
+            "Event {EventId} stored ({ContentHash}, {ServiceCode}, {EventType})",
             newEvent.EventId, newEvent.SourceEventId, service.Code, newEvent.EventType);
 
         return new EventIngestResult(EventIngestStatus.Created, ToResponse(newEvent, service.Code), null);
     }
 
+    //hash számítás a tartalom alapján, hogy a duplikációt ellenőrizni lehessen
+    private static string CreateContentHash(
+    CreateEventRequest request,
+    EventType eventType,
+    Severity severity)
+    {
+        var occurredAtUtc = request.OccurredAtUtc!.Value.ToUniversalTime();
+
+        using var buffer = new MemoryStream();
+
+        using (var writer = new Utf8JsonWriter(buffer))
+        {
+            writer.WriteStartObject();
+            writer.WriteString("serviceCode", request.ServiceCode);
+            writer.WriteString("eventType", eventType.ToString());
+            writer.WriteString("severity", severity.ToString());
+            writer.WriteString("occurredAtUtc", occurredAtUtc.ToString("O"));
+
+            if (request.Summary is null)
+                writer.WriteNull("summary");
+            else
+                writer.WriteString("summary", request.Summary);
+
+
+            //payload-nál nem számít a sorrend
+            writer.WritePropertyName("payload");
+            
+            if (request.Payload is { } payload)
+                WriteCanonicalJson(payload, writer);
+            else
+                writer.WriteNullValue();
+
+            writer.WriteEndObject();
+        }
+
+        var hashBytes = SHA256.HashData(buffer.ToArray());
+        return Convert.ToHexString(hashBytes);
+    }
+
+    //segédmetódus a canonical json írásához a payload-ból, hogy a sorrend ne számítson a hash számításnál
+    private static void WriteCanonicalJson(JsonElement element, Utf8JsonWriter writer)
+    {
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.Object:
+                writer.WriteStartObject();
+
+                foreach (var property in element.EnumerateObject()
+                             .OrderBy(property => property.Name, StringComparer.Ordinal))
+                {
+                    writer.WritePropertyName(property.Name);
+                    WriteCanonicalJson(property.Value, writer);
+                }
+
+                writer.WriteEndObject();
+                break;
+
+            case JsonValueKind.Array:
+                writer.WriteStartArray();
+
+                foreach (var item in element.EnumerateArray())
+                    WriteCanonicalJson(item, writer);
+
+                writer.WriteEndArray();
+                break;
+
+            default:
+                element.WriteTo(writer);
+                break;
+        }
+    }
 
     public async Task<List<EventResponse>> GetLatestAsync(int count, CancellationToken cancellationToken)
     {
@@ -145,6 +223,7 @@ public class EventService
             ReceivedAtUtc = evt.ReceivedAtUtc,
             Summary = evt.Summary,
             PayloadJson = evt.PayloadJson,
+            CorrelationKey = evt.CorrelationKey,
         };
     }
 }

@@ -9,7 +9,7 @@ public class Event
     public int ServiceId { get; set; }
 
     public Service Service { get; set; } = null!;
-
+        
     public EventType EventType { get; set; }
 
     public Severity Severity { get; set; }
@@ -21,4 +21,6 @@ public class Event
     public string? Summary { get; set; }
 
     public string? PayloadJson { get; set; }
+
+    public string? CorrelationKey { get; set; }
 }

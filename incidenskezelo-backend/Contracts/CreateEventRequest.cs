@@ -5,9 +5,6 @@ namespace incidenskezelo_backend.Contracts;
 
 public class CreateEventRequest
 {
-    [Required, MaxLength(100)]
-    public string SourceEventId { get; set; } = string.Empty;
-
     [Required, MaxLength(50)]
     public string ServiceCode { get; set; } = string.Empty;
 
@@ -24,4 +21,7 @@ public class CreateEventRequest
     public string? Summary { get; set; }
 
     public JsonElement? Payload { get; set; }
+
+    [MaxLength(100)]
+    public string? CorrelationKey { get; set; }
 }

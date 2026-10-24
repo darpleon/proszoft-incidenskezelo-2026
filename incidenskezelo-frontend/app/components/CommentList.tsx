@@ -2,9 +2,9 @@ import { ActionIcon } from "@mantine/core";
 import { IconPencil } from "@tabler/icons-react";
 import { useState } from "react";
 import { CommentForm } from "./CommentForm";
+import { UserAvatar } from "./UserAvatar";
 import type { IComment } from "~/interfaces/IComment";
 import { formatAge } from "~/lib/format";
-import { getInitials } from "~/lib/initials";
 
 type CommentListProps = {
   comments: IComment[];
@@ -37,9 +37,7 @@ export function CommentList({ comments, currentUserId, onEdit }: CommentListProp
 
         return (
           <li key={comment.commentId} className="flex gap-3 border-t border-[#eff2f1] py-3.5 first:border-t-0 first:pt-0">
-            <i className="grid size-7 shrink-0 place-items-center rounded-full bg-petrol-bg text-[10px] font-bold text-petrol not-italic">
-              {getInitials(comment.authorName)}
-            </i>
+            <UserAvatar name={comment.authorName} size="md" />
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-baseline gap-2">
                 <span className="text-sm font-semibold">

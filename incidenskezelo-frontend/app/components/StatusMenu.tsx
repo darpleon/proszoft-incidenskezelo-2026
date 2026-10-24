@@ -1,8 +1,8 @@
 import { Menu } from "@mantine/core";
 import { DetailMenu, DetailMenuItem } from "./DetailMenu";
-import { StatusRing } from "./StatusRing";
+import { IncidentStatusRing } from "./StatusRing";
 import type { IncidentStatus } from "~/interfaces/IIncident";
-import { statusLabels, statusTextColors } from "~/lib/labels";
+import { statusLabels } from "~/lib/labels";
 
 type StatusMenuProps = {
   status: IncidentStatus;
@@ -10,10 +10,6 @@ type StatusMenuProps = {
 };
 
 const workingStatuses: IncidentStatus[] = ["New", "Investigating", "InProgress", "Resolved"];
-
-function StatusIcon({ status }: { status: IncidentStatus }) {
-  return <StatusRing colorClass={statusTextColors[status]} filled={status !== "New"} />;
-}
 
 export function StatusMenu({ status, onChange }: StatusMenuProps) {
   const canClose = status === "Resolved" || status === "Closed";
@@ -23,19 +19,19 @@ export function StatusMenu({ status, onChange }: StatusMenuProps) {
       label="Change status"
       trigger={
         <>
-          <StatusIcon status={status} />
+          <IncidentStatusRing status={status} />
           {statusLabels[status]}
         </>
       }
     >
       {workingStatuses.map((option) => (
-        <DetailMenuItem key={option} selected={option === status} leftSection={<StatusIcon status={option} />} onClick={() => onChange(option)}>
+        <DetailMenuItem key={option} selected={option === status} leftSection={<IncidentStatusRing status={option} />} onClick={() => onChange(option)}>
           {statusLabels[option]}
         </DetailMenuItem>
       ))}
       <Menu.Divider />
       {canClose ? (
-        <DetailMenuItem selected={status === "Closed"} leftSection={<StatusIcon status="Closed" />} onClick={() => onChange("Closed")}>
+        <DetailMenuItem selected={status === "Closed"} leftSection={<IncidentStatusRing status="Closed" />} onClick={() => onChange("Closed")}>
           {statusLabels.Closed}
         </DetailMenuItem>
       ) : (

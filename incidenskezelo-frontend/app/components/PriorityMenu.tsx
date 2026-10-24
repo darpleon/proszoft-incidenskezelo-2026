@@ -1,5 +1,5 @@
 import { DetailMenu, DetailMenuItem } from "./DetailMenu";
-import { StatusRing } from "./StatusRing";
+import { PriorityRing } from "./StatusRing";
 import type { IncidentPriority } from "~/interfaces/IIncident";
 import { priorityLabels, priorityTextColors } from "~/lib/labels";
 
@@ -16,7 +16,7 @@ export function PriorityMenu({ priority, onChange }: PriorityMenuProps) {
       label="Change priority"
       trigger={
         <span className={`flex items-center gap-[7px] ${priorityTextColors[priority]}`}>
-          <StatusRing colorClass={priorityTextColors[priority]} />
+          <PriorityRing priority={priority} />
           {priorityLabels[priority]}
         </span>
       }
@@ -25,7 +25,7 @@ export function PriorityMenu({ priority, onChange }: PriorityMenuProps) {
         <DetailMenuItem
           key={option}
           selected={option === priority}
-          leftSection={<StatusRing colorClass={priorityTextColors[option]} />}
+          leftSection={<PriorityRing priority={option} />}
           onClick={() => onChange(option)}
         >
           {priorityLabels[option]}

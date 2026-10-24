@@ -2,8 +2,6 @@
 
 public class SimulationEvent
 {
-    public Guid EventId { get; set; }
-
     public string ServiceCode { get; set; } = string.Empty;
 
     public EventType EventType { get; set; }
@@ -15,4 +13,6 @@ public class SimulationEvent
     public string? Summary { get; set; }
 
     public object? Payload { get; set; }
+
+    public string CorrelationKey { get; set; } = string.Empty;
 }

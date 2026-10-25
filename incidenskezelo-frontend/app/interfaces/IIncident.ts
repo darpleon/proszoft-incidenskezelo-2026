@@ -10,6 +10,14 @@ export interface IIncidentRevisions {
   assignee: number;
 }
 
+export interface ICreateIncidentRequest {
+  title: string;
+  description: string;
+  priority: IncidentPriority;
+  assigneeUserId: number | null;
+  eventIds: number[];
+}
+
 export interface IIncident {
   id: string;
   title: string;

@@ -11,4 +11,5 @@ export interface IEvent {
   summary: string | null;
   payloadJson: string | null;
   correlationKey: string | null;
+  incidentId: string | null;
 }

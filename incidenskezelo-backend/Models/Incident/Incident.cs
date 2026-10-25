@@ -71,6 +71,8 @@ public class Incident
 
     public List<IncidentAssigneeChange> AssigneeHistory { get; private set; } = [];
 
+    public List<Event> Events { get; private set; } = [];
+
     public bool UpdateTitle(string newTitle, ChangeContext context)
     {
         if (Title == newTitle)

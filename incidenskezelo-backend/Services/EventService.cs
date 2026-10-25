@@ -93,7 +93,7 @@ public class EventService
             "Event {EventId} stored ({ContentHash}, {ServiceCode}, {EventType})",
             newEvent.EventId, newEvent.SourceEventId, service.Code, newEvent.EventType);
 
-        return new EventIngestResult(EventIngestStatus.Created, ToResponse(newEvent, service.Code), null);
+        return new EventIngestResult(EventIngestStatus.Created, ToResponse(newEvent, service.Code, null), null);
     }
 
     //hash számítás a tartalom alapján, hogy a duplikációt ellenőrizni lehessen
@@ -170,19 +170,16 @@ public class EventService
 
     public async Task<List<EventResponse>> GetLatestAsync(int count, CancellationToken cancellationToken)
     {
-        return await _dbContext.Events
+        return await ToResponses(_dbContext.Events
             .OrderByDescending(evt => evt.EventId)
-            .Take(count)
-            .Select(evt => ToResponse(evt, evt.Service.Code))
+            .Take(count))
             .ToListAsync(cancellationToken);
     }
 
 
     public async Task<EventResponse?> GetByIdAsync(long eventId, CancellationToken cancellationToken)
     {
-        return await _dbContext.Events
-            .Where(evt => evt.EventId == eventId)
-            .Select(evt => ToResponse(evt, evt.Service.Code))
+        return await ToResponses(_dbContext.Events.Where(evt => evt.EventId == eventId))
             .SingleOrDefaultAsync(cancellationToken);
     }
 
@@ -196,9 +193,7 @@ public class EventService
 
     private async Task<EventResponse?> FindBySourceIdAsync(string sourceEventId, CancellationToken cancellationToken)
     {
-        return await _dbContext.Events
-            .Where(evt => evt.SourceEventId == sourceEventId)
-            .Select(evt => ToResponse(evt, evt.Service.Code))
+        return await ToResponses(_dbContext.Events.Where(evt => evt.SourceEventId == sourceEventId))
             .SingleOrDefaultAsync(cancellationToken);
     }
 
@@ -210,7 +205,19 @@ public class EventService
     }
 
 
-    private static EventResponse ToResponse(Event evt, string serviceCode)
+    private IQueryable<EventResponse> ToResponses(IQueryable<Event> events)
+    {
+        return events.Select(evt => ToResponse(
+            evt,
+            evt.Service.Code,
+            _dbContext.Incidents
+                .Where(incident => incident.IncidentId == evt.IncidentId)
+                .Select(incident => (Guid?)incident.PublicId)
+                .FirstOrDefault()));
+    }
+
+
+    private static EventResponse ToResponse(Event evt, string serviceCode, Guid? incidentId)
     {
         return new EventResponse
         {
@@ -224,6 +231,7 @@ public class EventService
             Summary = evt.Summary,
             PayloadJson = evt.PayloadJson,
             CorrelationKey = evt.CorrelationKey,
+            IncidentId = incidentId,
         };
     }
 }

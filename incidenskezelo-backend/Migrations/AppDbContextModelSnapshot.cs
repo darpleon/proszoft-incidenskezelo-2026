@@ -39,6 +39,9 @@ namespace incidenskezelo_backend.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<int?>("IncidentId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("OccurredAtUtc")
                         .HasPrecision(3)
                         .HasColumnType("datetime2(3)");
@@ -68,6 +71,8 @@ namespace incidenskezelo_backend.Migrations
                         .HasColumnType("nvarchar(500)");
 
                     b.HasKey("EventId");
+
+                    b.HasIndex("IncidentId");
 
                     b.HasIndex("ServiceId");
 
@@ -485,6 +490,11 @@ namespace incidenskezelo_backend.Migrations
 
             modelBuilder.Entity("incidenskezelo_backend.Models.Event", b =>
                 {
+                    b.HasOne("incidenskezelo_backend.Models.Incident.Incident", null)
+                        .WithMany("Events")
+                        .HasForeignKey("IncidentId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("incidenskezelo_backend.Models.Service", "Service")
                         .WithMany()
                         .HasForeignKey("ServiceId")
@@ -623,6 +633,8 @@ namespace incidenskezelo_backend.Migrations
                         .IsRequired();
 
                     b.Navigation("DescriptionHistory");
+
+                    b.Navigation("Events");
 
                     b.Navigation("PriorityHistory");
 

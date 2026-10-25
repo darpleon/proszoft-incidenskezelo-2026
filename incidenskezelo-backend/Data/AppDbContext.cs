@@ -95,6 +95,11 @@ namespace incidenskezelo_backend.Data
 
             incident.HasIndex(i => i.PublicId).IsUnique();
 
+            incident.HasMany(i => i.Events)
+                .WithOne()
+                .HasForeignKey(evt => evt.IncidentId)
+                .OnDelete(DeleteBehavior.NoAction);
+
             incident.HasOne(i => i.Creation)
                 .WithOne(c => c.Incident)
                 .HasForeignKey<IncidentCreation>(c => c.IncidentId)

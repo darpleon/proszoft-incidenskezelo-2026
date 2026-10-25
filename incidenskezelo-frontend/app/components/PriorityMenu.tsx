@@ -1,4 +1,4 @@
-import { DetailMenu, DetailMenuItem } from "./DetailMenu";
+import { DetailMenu, DetailMenuItem, type DetailMenuVariant } from "./DetailMenu";
 import { PriorityRing } from "./StatusRing";
 import type { IncidentPriority } from "~/interfaces/IIncident";
 import { priorityLabels, priorityTextColors } from "~/lib/labels";
@@ -6,14 +6,16 @@ import { priorityLabels, priorityTextColors } from "~/lib/labels";
 type PriorityMenuProps = {
   priority: IncidentPriority;
   onChange: (priority: IncidentPriority) => void;
+  variant?: DetailMenuVariant;
 };
 
 const priorities: IncidentPriority[] = ["Low", "Medium", "High", "Critical"];
 
-export function PriorityMenu({ priority, onChange }: PriorityMenuProps) {
+export function PriorityMenu({ priority, onChange, variant }: PriorityMenuProps) {
   return (
     <DetailMenu
       label="Change priority"
+      variant={variant}
       trigger={
         <span className={`flex items-center gap-[7px] ${priorityTextColors[priority]}`}>
           <PriorityRing priority={priority} />

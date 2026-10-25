@@ -1,5 +1,5 @@
 import { Menu } from "@mantine/core";
-import { DetailMenu, DetailMenuItem } from "./DetailMenu";
+import { DetailMenu, DetailMenuItem, type DetailMenuVariant } from "./DetailMenu";
 import { UserAvatar } from "./UserAvatar";
 import type { IAssignableUser } from "~/interfaces/IUser";
 
@@ -8,12 +8,14 @@ type AssigneeMenuProps = {
   assigneeUserId: number | null;
   assigneeName: string | null;
   onChange: (userId: number | null) => void;
+  variant?: DetailMenuVariant;
 };
 
-export function AssigneeMenu({ users, assigneeUserId, assigneeName, onChange }: AssigneeMenuProps) {
+export function AssigneeMenu({ users, assigneeUserId, assigneeName, onChange, variant }: AssigneeMenuProps) {
   return (
     <DetailMenu
       label="Assign to"
+      variant={variant}
       trigger={
         assigneeName ? (
           <>

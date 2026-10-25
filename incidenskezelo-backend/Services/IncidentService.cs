@@ -41,8 +41,12 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
     public async Task<IncidentResponse> CreateAsync(CreateIncidentRequest request, int actorUserId, CancellationToken ct)
     {
         var changeContext = NewContext(actorUserId);
+        var assignee = await FindAssigneeAsync(request.AssigneeUserId, ct);
+        var events = await FindUnlinkedEventsAsync(request.EventIds ?? [], ct);
 
         var incident = Incident.Create(request.Title, request.Description, request.Priority, changeContext);
+        incident.UpdateAssignee(assignee, changeContext);
+        incident.Events.AddRange(events);
         context.Incidents.Add(incident);
         await context.SaveChangesAsync(ct);
 
@@ -94,18 +98,7 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
 
     public async Task<IncidentResponse?> UpdateAssigneeAsync(Guid id, int? assigneeUserId, int expectedRevision, int actorUserId, CancellationToken ct)
     {
-        User? assignee = null;
-
-        if (assigneeUserId is not null)
-        {
-            assignee = await context.Users.FirstOrDefaultAsync(
-                user => user.UserId == assigneeUserId && user.IsActive && user.Role != UserRole.Pending, ct);
-
-            if (assignee is null)
-            {
-                throw new ArgumentException("The assignee must be an active operator or admin.");
-            }
-        }
+        var assignee = await FindAssigneeAsync(assigneeUserId, ct);
 
         return await ApplyAsync(id, actorUserId, (incident, context) =>
         {
@@ -127,6 +120,34 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
         await context.SaveChangesAsync(ct);
 
         return IncidentResponse.From(incident);
+    }
+
+    private async Task<User?> FindAssigneeAsync(int? assigneeUserId, CancellationToken ct)
+    {
+        if (assigneeUserId is null)
+        {
+            return null;
+        }
+
+        var assignee = await context.Users.FirstOrDefaultAsync(
+            user => user.UserId == assigneeUserId && user.IsActive && user.Role != UserRole.Pending, ct);
+
+        return assignee ?? throw new ArgumentException("The assignee must be an active operator or admin.");
+    }
+
+    private async Task<List<Event>> FindUnlinkedEventsAsync(List<long> eventIds, CancellationToken ct)
+    {
+        var distinctIds = eventIds.Distinct().ToList();
+        var events = await context.Events
+            .Where(evt => distinctIds.Contains(evt.EventId) && evt.IncidentId == null)
+            .ToListAsync(ct);
+
+        if (events.Count != distinctIds.Count)
+        {
+            throw new ArgumentException("Some events were not found or are already linked to an incident.");
+        }
+
+        return events;
     }
 
     private ChangeContext NewContext(int actorUserId)

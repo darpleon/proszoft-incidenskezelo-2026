@@ -43,8 +43,15 @@ public class IncidentsController(IIncidentService incidentService) : ControllerB
             return Invalid(errors);
         }
 
-        var incident = await incidentService.CreateAsync(request, CurrentUserId(), ct);
-        return CreatedAtAction(nameof(GetById), new { id = incident.Id }, incident);
+        try
+        {
+            var incident = await incidentService.CreateAsync(request, CurrentUserId(), ct);
+            return CreatedAtAction(nameof(GetById), new { id = incident.Id }, incident);
+        }
+        catch (ArgumentException ex)
+        {
+            return Invalid([ex.Message]);
+        }
     }
 
     [HttpPatch("{id}/title")]

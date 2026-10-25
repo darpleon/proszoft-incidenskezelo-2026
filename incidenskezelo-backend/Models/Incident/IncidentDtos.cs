@@ -2,7 +2,12 @@ using incidenskezelo_backend.Models.Incident.Changes;
 
 namespace incidenskezelo_backend.Models.Incident;
 
-public record CreateIncidentRequest(string Title, string Description, IncidentPriority Priority);
+public record CreateIncidentRequest(
+    string Title,
+    string Description,
+    IncidentPriority Priority,
+    int? AssigneeUserId = null,
+    List<long>? EventIds = null);
 
 public record TransitionRequest(IncidentStatus Status, int? ExpectedRevision);
 

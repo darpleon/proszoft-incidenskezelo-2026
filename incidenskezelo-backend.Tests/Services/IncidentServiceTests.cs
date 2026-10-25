@@ -100,11 +100,74 @@ public class IncidentServiceTests
     }
 
 
+    [TestMethod]
+    public async Task CreateAsync_WithAssigneeAndEvents_LinksBoth()
+    {
+        var first = AddEvent();
+        var second = AddEvent();
+        var request = new CreateIncidentRequest("Orders API errors", "POST /orders returns 500.", IncidentPriority.High, _operator.UserId, [first.EventId, second.EventId]);
+
+        var incident = await _incidentService.CreateAsync(request, _operator.UserId, CancellationToken.None);
+
+        Assert.AreEqual(_operator.UserId, incident.AssigneeUserId);
+        Assert.AreEqual(2, _dbContext.Events.Count(evt => evt.IncidentId != null));
+
+        var history = await _incidentService.GetHistoryAsync(incident.Id, CancellationToken.None);
+        Assert.AreEqual(1, history!.Count(entry => entry.Kind == "assignee"));
+    }
+
+
+    [TestMethod]
+    public async Task CreateAsync_EventAlreadyLinked_ThrowsArgumentException()
+    {
+        var linked = AddEvent();
+        await _incidentService.CreateAsync(
+            new CreateIncidentRequest("First", "First incident.", IncidentPriority.Low, EventIds: [linked.EventId]),
+            _operator.UserId,
+            CancellationToken.None);
+
+        await Assert.ThrowsExactlyAsync<ArgumentException>(() => _incidentService.CreateAsync(
+            new CreateIncidentRequest("Second", "Second incident.", IncidentPriority.Low, EventIds: [linked.EventId]),
+            _operator.UserId,
+            CancellationToken.None));
+        Assert.AreEqual(1, _dbContext.Incidents.Count());
+    }
+
+
+    [TestMethod]
+    public async Task CreateAsync_UnknownEvent_ThrowsArgumentException()
+    {
+        var request = new CreateIncidentRequest("Orders API errors", "POST /orders returns 500.", IncidentPriority.High, EventIds: [999]);
+
+        await Assert.ThrowsExactlyAsync<ArgumentException>(() =>
+            _incidentService.CreateAsync(request, _operator.UserId, CancellationToken.None));
+        Assert.AreEqual(0, _dbContext.Incidents.Count());
+    }
+
+
     private async Task<IncidentResponse> CreateIncidentAsync()
     {
         var request = new CreateIncidentRequest("Database connection lost", "postgres-main refuses connections.", IncidentPriority.High);
 
         return await _incidentService.CreateAsync(request, _operator.UserId, CancellationToken.None);
+    }
+
+
+    private Event AddEvent()
+    {
+        var evt = new Event
+        {
+            SourceEventId = Guid.NewGuid().ToString(),
+            ServiceId = 1,
+            EventType = EventType.HighErrorRate,
+            Severity = Severity.Error,
+            OccurredAtUtc = DateTime.UtcNow,
+            ReceivedAtUtc = DateTime.UtcNow,
+        };
+        _dbContext.Events.Add(evt);
+        _dbContext.SaveChanges();
+
+        return evt;
     }
 
 

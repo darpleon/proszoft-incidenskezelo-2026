@@ -1,4 +1,5 @@
 using incidenskezelo_backend.Auth;
+using incidenskezelo_backend.Contracts;
 using incidenskezelo_backend.Models.Incident;
 using incidenskezelo_backend.Models.Incident.Changes;
 using incidenskezelo_backend.Services;
@@ -10,7 +11,7 @@ namespace incidenskezelo_backend.Controllers;
 [ApiController]
 [Route("api/incidents")]
 [Authorize(Policy = AuthPolicies.CanHandleIncidents)]
-public class IncidentsController(IIncidentService incidentService) : ControllerBase
+public class IncidentsController(IIncidentService incidentService, EventService eventService) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(typeof(List<IncidentResponse>), StatusCodes.Status200OK)]
@@ -193,6 +194,16 @@ public class IncidentsController(IIncidentService incidentService) : ControllerB
                 Status = StatusCodes.Status409Conflict
             });
         }
+    }
+
+    [HttpGet("{id}/events")]
+    [ProducesResponseType(typeof(List<EventResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<List<EventResponse>>> GetEvents(Guid id, CancellationToken ct)
+    {
+        var events = await eventService.GetByIncidentAsync(id, ct);
+        return events is null ? Missing(id) : events;
     }
 
     [HttpGet("{id}/history")]

@@ -177,6 +177,25 @@ public class EventService
     }
 
 
+    public async Task<List<EventResponse>?> GetByIncidentAsync(Guid incidentId, CancellationToken cancellationToken)
+    {
+        var internalId = await _dbContext.Incidents
+            .Where(incident => incident.PublicId == incidentId)
+            .Select(incident => (int?)incident.IncidentId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (internalId is null)
+        {
+            return null;
+        }
+
+        return await ToResponses(_dbContext.Events
+            .Where(evt => evt.IncidentId == internalId)
+            .OrderBy(evt => evt.OccurredAtUtc))
+            .ToListAsync(cancellationToken);
+    }
+
+
     public async Task<EventResponse?> GetByIdAsync(long eventId, CancellationToken cancellationToken)
     {
         return await ToResponses(_dbContext.Events.Where(evt => evt.EventId == eventId))

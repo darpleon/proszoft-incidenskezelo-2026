@@ -1,5 +1,5 @@
 import { Tabs } from "@mantine/core";
-import { IconMessage } from "@tabler/icons-react";
+import { IconFileDescription, IconMessage, IconTimelineEvent } from "@tabler/icons-react";
 import { isAxiosError } from "axios";
 import { useState } from "react";
 import { useRevalidator } from "react-router";
@@ -137,8 +137,10 @@ export default function IncidentDetail({ loaderData }: Route.ComponentProps) {
 
       <Tabs key={incident.id} defaultValue="overview" color="#0f717d" className="flex min-h-0 flex-1 flex-col">
         <Tabs.List className="mx-[22px] mt-[22px] max-[680px]:mx-4">
-          <Tabs.Tab value="overview">Overview</Tabs.Tab>
-          <Tabs.Tab value="events" rightSection={<TabCount count={events.length} />}>
+          <Tabs.Tab value="overview" leftSection={<IconFileDescription size={14} />}>
+            Overview
+          </Tabs.Tab>
+          <Tabs.Tab value="events" leftSection={<IconTimelineEvent size={14} />} rightSection={<TabCount count={events.length} />}>
             Events
           </Tabs.Tab>
           <Tabs.Tab value="comments" leftSection={<IconMessage size={14} />} rightSection={<TabCount count={incidentComments.length} />}>

@@ -7,11 +7,13 @@ import api from "~/api/api";
 import { CommentForm } from "~/components/CommentForm";
 import { CommentList } from "~/components/CommentList";
 import { EmptyState } from "~/components/EmptyState";
+import { EventsTable } from "~/components/EventsTable";
 import { FormAlert } from "~/components/FormAlert";
 import { IncidentDetailHeader } from "~/components/IncidentDetailHeader";
 import { IncidentOverview } from "~/components/IncidentOverview";
 import useAuth from "~/hooks/useAuth";
 import type { IComment } from "~/interfaces/IComment";
+import type { IEvent } from "~/interfaces/IEvent";
 import type { IncidentPriority, IncidentStatus } from "~/interfaces/IIncident";
 import type { IAssignableUser } from "~/interfaces/IUser";
 import type { Route } from "./+types/incident-detail";
@@ -26,16 +28,18 @@ function TabCount({ count }: { count: number }) {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   try {
-    const [incident, assignableUsers] = await Promise.all([
+    const [incident, assignableUsers, events] = await Promise.all([
       api.Incident.getById(params.incidentId),
       api.User.getAssignable(),
+      api.Incident.getEvents(params.incidentId),
     ]);
-    return { incident: incident.data, assignableUsers: assignableUsers.data, loadError: null };
+    return { incident: incident.data, assignableUsers: assignableUsers.data, events: events.data, loadError: null };
   } catch (error) {
     const isMissing = isAxiosError(error) && (error.response?.status === 404 || error.response?.status === 400);
     return {
       incident: null,
       assignableUsers: [] as IAssignableUser[],
+      events: [] as IEvent[],
       loadError: isMissing ? "Incident not found." : "The incident could not be loaded.",
     };
   }
@@ -54,7 +58,7 @@ function changeErrorMessage(error: unknown) {
 }
 
 export default function IncidentDetail({ loaderData }: Route.ComponentProps) {
-  const { incident, assignableUsers, loadError } = loaderData;
+  const { incident, assignableUsers, events, loadError } = loaderData;
   const { user } = useAuth();
   const revalidator = useRevalidator();
   const [allComments, setAllComments] = useState<IComment[]>([]);
@@ -134,7 +138,9 @@ export default function IncidentDetail({ loaderData }: Route.ComponentProps) {
       <Tabs key={incident.id} defaultValue="overview" color="#0f717d" className="flex min-h-0 flex-1 flex-col">
         <Tabs.List className="mx-[22px] mt-[22px] max-[680px]:mx-4">
           <Tabs.Tab value="overview">Overview</Tabs.Tab>
-          <Tabs.Tab value="events">Events</Tabs.Tab>
+          <Tabs.Tab value="events" rightSection={<TabCount count={events.length} />}>
+            Events
+          </Tabs.Tab>
           <Tabs.Tab value="comments" leftSection={<IconMessage size={14} />} rightSection={<TabCount count={incidentComments.length} />}>
             Comments
           </Tabs.Tab>
@@ -145,7 +151,7 @@ export default function IncidentDetail({ loaderData }: Route.ComponentProps) {
             <IncidentOverview incident={incident} />
           </Tabs.Panel>
           <Tabs.Panel value="events">
-            <EmptyState>No linked events yet.</EmptyState>
+            {events.length > 0 ? <EventsTable events={events} /> : <EmptyState>No linked events yet.</EmptyState>}
           </Tabs.Panel>
           <Tabs.Panel value="comments">
             <CommentList comments={incidentComments} currentUserId={user?.userId} onEdit={editComment} />

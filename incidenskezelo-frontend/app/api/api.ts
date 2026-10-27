@@ -25,6 +25,7 @@ const Incident = {
   getAll: () => axiosInstance.get<IIncident[]>(`/incidents`),
   getById: (id: string) => axiosInstance.get<IIncident>(`/incidents/${id}`),
   create: (request: ICreateIncidentRequest) => axiosInstance.post<IIncident>(`/incidents`, request),
+  getEvents: (id: string) => axiosInstance.get<IEvent[]>(`/incidents/${id}/events`),
   updateStatus: (id: string, status: IncidentStatus, expectedRevision: number) =>
     axiosInstance.patch<IIncident>(`/incidents/${id}/status`, { status, expectedRevision }),
   updatePriority: (id: string, priority: IncidentPriority, expectedRevision: number) =>

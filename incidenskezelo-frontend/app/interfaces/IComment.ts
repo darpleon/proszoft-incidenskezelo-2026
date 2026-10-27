@@ -1,6 +1,6 @@
 export interface IComment {
   commentId: number;
-  incidentId: number;
+  incidentId: string;
   authorUserId: number;
   authorName: string;
   body: string;

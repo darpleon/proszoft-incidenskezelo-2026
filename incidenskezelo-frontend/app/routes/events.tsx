@@ -1,40 +1,38 @@
 import { TextInput, Title } from "@mantine/core";
 import { useState } from "react";
-import { EventFilterChips, type EventFilter } from "~/components/EventFilterChips";
+import api from "~/api/api";
+import { EmptyState } from "~/components/EmptyState";
 import { EventsTable } from "~/components/EventsTable";
-import { events } from "~/data/events";
-import { services } from "~/data/services";
 import type { IEvent } from "~/interfaces/IEvent";
-import { matchesEventFilter } from "~/lib/events";
 import type { Route } from "./+types/events";
 
 export function meta({}: Route.MetaArgs) {
   return [{ title: "Events | Incident Manager" }];
 }
 
+export async function clientLoader() {
+  try {
+    const response = await api.Event.getLatest();
+    return { events: response.data, loadError: false };
+  } catch {
+    return { events: [] as IEvent[], loadError: true };
+  }
+}
+
 function matchesSearch(event: IEvent, search: string) {
   const text = search.trim().toLowerCase();
   if (!text) return true;
 
-  const serviceCode = services.find((service) => service.serviceId === event.serviceId)?.code ?? "";
-  return `evt-${event.eventId}`.includes(text) || serviceCode.includes(text);
+  return `evt-${event.eventId}`.includes(text) || event.serviceCode.includes(text);
 }
 
-export default function Events() {
-  const [filter, setFilter] = useState<EventFilter>("all");
+export default function Events({ loaderData }: Route.ComponentProps) {
+  const { events, loadError } = loaderData;
   const [search, setSearch] = useState("");
 
-  const sortedEvents = [...events].sort((a, b) => b.occurredAtUtc.localeCompare(a.occurredAtUtc));
-  const counts: Record<EventFilter, number> = {
-    all: events.length,
-    bound: events.filter((event) => matchesEventFilter(event, "bound")).length,
-    unbound: events.filter((event) => matchesEventFilter(event, "unbound")).length,
-    duplicate: events.filter((event) => matchesEventFilter(event, "duplicate")).length,
-    failed: events.filter((event) => matchesEventFilter(event, "failed")).length,
-  };
-  const visibleEvents = sortedEvents.filter(
-    (event) => matchesEventFilter(event, filter) && matchesSearch(event, search),
-  );
+  const visibleEvents = events
+    .filter((event) => matchesSearch(event, search))
+    .sort((a, b) => b.occurredAtUtc.localeCompare(a.occurredAtUtc));
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -45,7 +43,7 @@ export default function Events() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3 px-[22px] pt-4 pb-3 max-[680px]:px-4">
-        <EventFilterChips value={filter} counts={counts} onChange={setFilter} />
+        <p className="text-[11.5px] text-text-3">Latest {events.length} events</p>
         <TextInput
           value={search}
           onChange={(event) => setSearch(event.currentTarget.value)}
@@ -56,12 +54,11 @@ export default function Events() {
         />
       </div>
 
-      <p className="px-[22px] pb-3 text-[11.5px] text-text-3 max-[680px]:px-4">
-        {counts.all} events, {counts.unbound} not linked to an incident, {counts.failed} failed to process
-      </p>
-
       <div className="min-h-0 flex-1 overflow-auto px-[22px] pb-[22px] max-[920px]:overflow-visible max-[680px]:px-4">
-        <EventsTable events={visibleEvents} showIncident />
+        {loadError && <EmptyState>The events could not be loaded.</EmptyState>}
+        {!loadError && events.length === 0 && <EmptyState>No events received yet.</EmptyState>}
+        {events.length > 0 && visibleEvents.length === 0 && <EmptyState>No events match the search.</EmptyState>}
+        {visibleEvents.length > 0 && <EventsTable events={visibleEvents} />}
       </div>
     </div>
   );

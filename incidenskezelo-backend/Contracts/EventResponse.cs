@@ -23,4 +23,6 @@ public class EventResponse
     public string? PayloadJson { get; set; }
 
     public string? CorrelationKey { get; set; }
+
+    public Guid? IncidentId { get; set; }
 }

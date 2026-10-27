@@ -1,15 +1,15 @@
-export type EventSeverity = "Low" | "Medium" | "High" | "Critical";
-
-export type ProcessingState = "Processed" | "Duplicate" | "Failed";
+export type EventSeverity = "Info" | "Warning" | "Error" | "Critical";
 
 export interface IEvent {
   eventId: number;
-  incidentId: number | null;
-  serviceId: number;
+  sourceEventId: string;
+  serviceCode: string;
   eventType: string;
   severity: EventSeverity;
   occurredAtUtc: string;
-  processingState: ProcessingState;
-  summary: string;
-  payload: Record<string, unknown>;
+  receivedAtUtc: string;
+  summary: string | null;
+  payloadJson: string | null;
+  correlationKey: string | null;
+  incidentId: string | null;
 }

@@ -29,7 +29,7 @@ public class Incident
             Status = IncidentStatus.Open
         };
 
-        incident.Creation = new IncidentCreation(incident, context.AtUtc);
+        incident.Creation = new IncidentCreation(incident, context);
         return incident;
     }
 
@@ -45,6 +45,8 @@ public class Incident
 
     public int StatusRevision { get; private set; }
 
+    public int AssigneeRevision { get; private set; }
+
     public string Title { get; private set; } = string.Empty;
 
     public string Description { get; private set; } = string.Empty;
@@ -52,6 +54,10 @@ public class Incident
     public IncidentStatus Status { get; private set; }
 
     public IncidentPriority Priority { get; private set; } = IncidentPriority.Medium;
+
+    public int? AssigneeUserId { get; private set; }
+
+    public User? Assignee { get; private set; }
 
     public IncidentCreation Creation { get; private set; } = null!;
 
@@ -63,6 +69,10 @@ public class Incident
 
     public List<IncidentPriorityChange> PriorityHistory { get; private set; } = [];
 
+    public List<IncidentAssigneeChange> AssigneeHistory { get; private set; } = [];
+
+    public List<Event> Events { get; private set; } = [];
+
     public bool UpdateTitle(string newTitle, ChangeContext context)
     {
         if (Title == newTitle)
@@ -70,7 +80,7 @@ public class Incident
             return false;
         }
 
-        TitleHistory.Add(new IncidentTitleChange(this, Title, newTitle, context.AtUtc));
+        TitleHistory.Add(new IncidentTitleChange(this, Title, newTitle, context));
         TitleRevision++;
         Title = newTitle;
         return true;
@@ -83,7 +93,7 @@ public class Incident
             return false;
         }
 
-        DescriptionHistory.Add(new IncidentDescriptionChange(this, Description, newDescription, context.AtUtc));
+        DescriptionHistory.Add(new IncidentDescriptionChange(this, Description, newDescription, context));
         DescriptionRevision++;
         Description = newDescription;
         return true;
@@ -96,9 +106,23 @@ public class Incident
             return false;
         }
 
-        PriorityHistory.Add(new IncidentPriorityChange(this, Priority, newPriority, context.AtUtc));
+        PriorityHistory.Add(new IncidentPriorityChange(this, Priority, newPriority, context));
         PriorityRevision++;
         Priority = newPriority;
+        return true;
+    }
+
+    public bool UpdateAssignee(User? newAssignee, ChangeContext context)
+    {
+        if (AssigneeUserId == newAssignee?.UserId)
+        {
+            return false;
+        }
+
+        AssigneeHistory.Add(new IncidentAssigneeChange(this, AssigneeUserId, newAssignee?.UserId, context));
+        AssigneeRevision++;
+        AssigneeUserId = newAssignee?.UserId;
+        Assignee = newAssignee;
         return true;
     }
 
@@ -109,7 +133,7 @@ public class Incident
             throw new InvalidOperationException($"Invalid transition: {Status} -> {next}.");
         }
 
-        StatusHistory.Add(new IncidentStatusChange(this, Status, next, context.AtUtc));
+        StatusHistory.Add(new IncidentStatusChange(this, Status, next, context));
         StatusRevision++;
         Status = next;
     }

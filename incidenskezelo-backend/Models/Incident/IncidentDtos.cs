@@ -2,7 +2,12 @@ using incidenskezelo_backend.Models.Incident.Changes;
 
 namespace incidenskezelo_backend.Models.Incident;
 
-public record CreateIncidentRequest(string Title, string Description, IncidentPriority Priority);
+public record CreateIncidentRequest(
+    string Title,
+    string Description,
+    IncidentPriority Priority,
+    int? AssigneeUserId = null,
+    List<long>? EventIds = null);
 
 public record TransitionRequest(IncidentStatus Status, int? ExpectedRevision);
 
@@ -12,10 +17,12 @@ public record UpdateDescriptionRequest(string Description, int? ExpectedRevision
 
 public record UpdatePriorityRequest(IncidentPriority Priority, int? ExpectedRevision);
 
-public record IncidentRevisions(int Title, int Description, int Priority, int Status)
+public record UpdateAssigneeRequest(int? AssigneeUserId, int? ExpectedRevision);
+
+public record IncidentRevisions(int Title, int Description, int Priority, int Status, int Assignee)
 {
     public static IncidentRevisions From(Incident incident) =>
-        new(incident.TitleRevision, incident.DescriptionRevision, incident.PriorityRevision, incident.StatusRevision);
+        new(incident.TitleRevision, incident.DescriptionRevision, incident.PriorityRevision, incident.StatusRevision, incident.AssigneeRevision);
 }
 
 public record IncidentResponse(
@@ -24,6 +31,8 @@ public record IncidentResponse(
     string Description,
     IncidentStatus Status,
     IncidentPriority Priority,
+    int? AssigneeUserId,
+    string? AssigneeName,
     DateTime CreatedAtUtc,
     DateTime UpdatedAtUtc,
     DateTime? ClosedAtUtc,
@@ -41,6 +50,8 @@ public record IncidentResponse(
             incident.Description,
             incident.Status,
             incident.Priority,
+            incident.AssigneeUserId,
+            incident.Assignee?.Name,
             incident.Creation.OccurredAtUtc,
             LatestChangeUtc(incident),
             closedAt,
@@ -54,7 +65,8 @@ public record IncidentResponse(
             incident.StatusHistory,
             incident.TitleHistory,
             incident.DescriptionHistory,
-            incident.PriorityHistory
+            incident.PriorityHistory,
+            incident.AssigneeHistory
         ];
 
         return streams.SelectMany(s => s)
@@ -68,4 +80,6 @@ public record IncidentChangeResponse(
     string Kind,
     DateTime OccurredAtUtc,
     string? OldValue,
-    string? NewValue);
+    string? NewValue,
+    int? ActorUserId,
+    string? ActorName);

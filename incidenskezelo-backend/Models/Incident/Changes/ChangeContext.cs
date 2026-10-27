@@ -1,3 +1,3 @@
 namespace incidenskezelo_backend.Models.Incident.Changes;
 
-public record ChangeContext(DateTime AtUtc);
+public record ChangeContext(DateTime AtUtc, int? ActorUserId);

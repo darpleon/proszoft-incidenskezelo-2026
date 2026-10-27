@@ -27,6 +27,8 @@ namespace incidenskezelo_backend.Data
 
         public DbSet<IncidentPriorityChange> IncidentPriorityChanges => Set<IncidentPriorityChange>();
 
+        public DbSet<IncidentAssigneeChange> IncidentAssigneeChanges => Set<IncidentAssigneeChange>();
+
         protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
         {
             configurationBuilder.Properties<Enum>()
@@ -93,6 +95,11 @@ namespace incidenskezelo_backend.Data
 
             incident.HasIndex(i => i.PublicId).IsUnique();
 
+            incident.HasMany(i => i.Events)
+                .WithOne()
+                .HasForeignKey(evt => evt.IncidentId)
+                .OnDelete(DeleteBehavior.NoAction);
+
             incident.HasOne(i => i.Creation)
                 .WithOne(c => c.Incident)
                 .HasForeignKey<IncidentCreation>(c => c.IncidentId)
@@ -137,6 +144,17 @@ namespace incidenskezelo_backend.Data
             var priorityChange = modelBuilder.Entity<IncidentPriorityChange>();
 
             priorityChange.HasIndex(c => new { c.IncidentId, c.OccurredAtUtc });
+
+            incident.HasMany(i => i.AssigneeHistory)
+                .WithOne(c => c.Incident)
+                .HasForeignKey(c => c.IncidentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            var assigneeChange = modelBuilder.Entity<IncidentAssigneeChange>();
+
+            assigneeChange.HasIndex(c => new { c.IncidentId, c.OccurredAtUtc });
+            assigneeChange.HasOne<User>().WithMany().HasForeignKey(c => c.OldValue).OnDelete(DeleteBehavior.NoAction);
+            assigneeChange.HasOne<User>().WithMany().HasForeignKey(c => c.NewValue).OnDelete(DeleteBehavior.NoAction);
         }
 
         private sealed class AsUtcConverter() : ValueConverter<DateTime, DateTime>(

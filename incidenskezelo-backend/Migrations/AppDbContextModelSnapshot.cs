@@ -39,6 +39,9 @@ namespace incidenskezelo_backend.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<int?>("IncidentId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("OccurredAtUtc")
                         .HasPrecision(3)
                         .HasColumnType("datetime2(3)");
@@ -69,6 +72,8 @@ namespace incidenskezelo_backend.Migrations
 
                     b.HasKey("EventId");
 
+                    b.HasIndex("IncidentId");
+
                     b.HasIndex("ServiceId");
 
                     b.HasIndex("SourceEventId")
@@ -84,6 +89,42 @@ namespace incidenskezelo_backend.Migrations
                         });
                 });
 
+            modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Changes.IncidentAssigneeChange", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("ActorUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("IncidentId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("NewValue")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("OldValue")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActorUserId");
+
+                    b.HasIndex("NewValue");
+
+                    b.HasIndex("OldValue");
+
+                    b.HasIndex("IncidentId", "OccurredAtUtc");
+
+                    b.ToTable("IncidentAssigneeChanges");
+                });
+
             modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Changes.IncidentCreation", b =>
                 {
                     b.Property<int>("Id")
@@ -92,6 +133,9 @@ namespace incidenskezelo_backend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("ActorUserId")
+                        .HasColumnType("int");
+
                     b.Property<int>("IncidentId")
                         .HasColumnType("int");
 
@@ -99,6 +143,8 @@ namespace incidenskezelo_backend.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ActorUserId");
 
                     b.HasIndex("IncidentId")
                         .IsUnique();
@@ -114,6 +160,9 @@ namespace incidenskezelo_backend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("ActorUserId")
+                        .HasColumnType("int");
+
                     b.Property<int>("IncidentId")
                         .HasColumnType("int");
 
@@ -131,6 +180,8 @@ namespace incidenskezelo_backend.Migrations
                         .HasColumnType("nvarchar(4000)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ActorUserId");
 
                     b.HasIndex("IncidentId", "OccurredAtUtc");
 
@@ -145,6 +196,9 @@ namespace incidenskezelo_backend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("ActorUserId")
+                        .HasColumnType("int");
+
                     b.Property<int>("IncidentId")
                         .HasColumnType("int");
 
@@ -162,6 +216,8 @@ namespace incidenskezelo_backend.Migrations
                         .HasColumnType("nvarchar(50)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ActorUserId");
 
                     b.HasIndex("IncidentId", "OccurredAtUtc");
 
@@ -176,6 +232,9 @@ namespace incidenskezelo_backend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("ActorUserId")
+                        .HasColumnType("int");
+
                     b.Property<int>("IncidentId")
                         .HasColumnType("int");
 
@@ -193,6 +252,8 @@ namespace incidenskezelo_backend.Migrations
                         .HasColumnType("nvarchar(50)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ActorUserId");
 
                     b.HasIndex("IncidentId", "OccurredAtUtc");
 
@@ -207,6 +268,9 @@ namespace incidenskezelo_backend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("ActorUserId")
+                        .HasColumnType("int");
+
                     b.Property<int>("IncidentId")
                         .HasColumnType("int");
 
@@ -225,6 +289,8 @@ namespace incidenskezelo_backend.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ActorUserId");
+
                     b.HasIndex("IncidentId", "OccurredAtUtc");
 
                     b.ToTable("IncidentTitleChanges");
@@ -237,6 +303,12 @@ namespace incidenskezelo_backend.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IncidentId"));
+
+                    b.Property<int>("AssigneeRevision")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("AssigneeUserId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -274,6 +346,8 @@ namespace incidenskezelo_backend.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("IncidentId");
+
+                    b.HasIndex("AssigneeUserId");
 
                     b.HasIndex("PublicId")
                         .IsUnique();
@@ -416,6 +490,11 @@ namespace incidenskezelo_backend.Migrations
 
             modelBuilder.Entity("incidenskezelo_backend.Models.Event", b =>
                 {
+                    b.HasOne("incidenskezelo_backend.Models.Incident.Incident", null)
+                        .WithMany("Events")
+                        .HasForeignKey("IncidentId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("incidenskezelo_backend.Models.Service", "Service")
                         .WithMany()
                         .HasForeignKey("ServiceId")
@@ -425,67 +504,137 @@ namespace incidenskezelo_backend.Migrations
                     b.Navigation("Service");
                 });
 
+            modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Changes.IncidentAssigneeChange", b =>
+                {
+                    b.HasOne("incidenskezelo_backend.Models.User", "Actor")
+                        .WithMany()
+                        .HasForeignKey("ActorUserId");
+
+                    b.HasOne("incidenskezelo_backend.Models.Incident.Incident", "Incident")
+                        .WithMany("AssigneeHistory")
+                        .HasForeignKey("IncidentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("incidenskezelo_backend.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("NewValue")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("incidenskezelo_backend.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("OldValue")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("Actor");
+
+                    b.Navigation("Incident");
+                });
+
             modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Changes.IncidentCreation", b =>
                 {
+                    b.HasOne("incidenskezelo_backend.Models.User", "Actor")
+                        .WithMany()
+                        .HasForeignKey("ActorUserId");
+
                     b.HasOne("incidenskezelo_backend.Models.Incident.Incident", "Incident")
                         .WithOne("Creation")
                         .HasForeignKey("incidenskezelo_backend.Models.Incident.Changes.IncidentCreation", "IncidentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("Actor");
+
                     b.Navigation("Incident");
                 });
 
             modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Changes.IncidentDescriptionChange", b =>
                 {
+                    b.HasOne("incidenskezelo_backend.Models.User", "Actor")
+                        .WithMany()
+                        .HasForeignKey("ActorUserId");
+
                     b.HasOne("incidenskezelo_backend.Models.Incident.Incident", "Incident")
                         .WithMany("DescriptionHistory")
                         .HasForeignKey("IncidentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("Actor");
+
                     b.Navigation("Incident");
                 });
 
             modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Changes.IncidentPriorityChange", b =>
                 {
+                    b.HasOne("incidenskezelo_backend.Models.User", "Actor")
+                        .WithMany()
+                        .HasForeignKey("ActorUserId");
+
                     b.HasOne("incidenskezelo_backend.Models.Incident.Incident", "Incident")
                         .WithMany("PriorityHistory")
                         .HasForeignKey("IncidentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("Actor");
+
                     b.Navigation("Incident");
                 });
 
             modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Changes.IncidentStatusChange", b =>
                 {
+                    b.HasOne("incidenskezelo_backend.Models.User", "Actor")
+                        .WithMany()
+                        .HasForeignKey("ActorUserId");
+
                     b.HasOne("incidenskezelo_backend.Models.Incident.Incident", "Incident")
                         .WithMany("StatusHistory")
                         .HasForeignKey("IncidentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("Actor");
+
                     b.Navigation("Incident");
                 });
 
             modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Changes.IncidentTitleChange", b =>
                 {
+                    b.HasOne("incidenskezelo_backend.Models.User", "Actor")
+                        .WithMany()
+                        .HasForeignKey("ActorUserId");
+
                     b.HasOne("incidenskezelo_backend.Models.Incident.Incident", "Incident")
                         .WithMany("TitleHistory")
                         .HasForeignKey("IncidentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("Actor");
+
                     b.Navigation("Incident");
                 });
 
             modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Incident", b =>
                 {
+                    b.HasOne("incidenskezelo_backend.Models.User", "Assignee")
+                        .WithMany()
+                        .HasForeignKey("AssigneeUserId");
+
+                    b.Navigation("Assignee");
+                });
+
+            modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Incident", b =>
+                {
+                    b.Navigation("AssigneeHistory");
+
                     b.Navigation("Creation")
                         .IsRequired();
 
                     b.Navigation("DescriptionHistory");
+
+                    b.Navigation("Events");
 
                     b.Navigation("PriorityHistory");
 

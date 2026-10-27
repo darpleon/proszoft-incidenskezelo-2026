@@ -1,16 +1,21 @@
-import { Tabs, Text } from "@mantine/core";
-import { IconMessage } from "@tabler/icons-react";
+import { Tabs } from "@mantine/core";
+import { IconFileDescription, IconMessage, IconTimelineEvent } from "@tabler/icons-react";
+import { isAxiosError } from "axios";
 import { useState } from "react";
+import { useRevalidator } from "react-router";
+import api from "~/api/api";
 import { CommentForm } from "~/components/CommentForm";
 import { CommentList } from "~/components/CommentList";
-import { IncidentDetailHeader } from "~/components/IncidentDetailHeader";
+import { EmptyState } from "~/components/EmptyState";
 import { EventsTable } from "~/components/EventsTable";
+import { FormAlert } from "~/components/FormAlert";
+import { IncidentDetailHeader } from "~/components/IncidentDetailHeader";
 import { IncidentOverview } from "~/components/IncidentOverview";
-import { comments } from "~/data/comments";
-import { events } from "~/data/events";
-import { incidents } from "~/data/incidents";
 import useAuth from "~/hooks/useAuth";
 import type { IComment } from "~/interfaces/IComment";
+import type { IEvent } from "~/interfaces/IEvent";
+import type { IncidentPriority, IncidentStatus } from "~/interfaces/IIncident";
+import type { IAssignableUser } from "~/interfaces/IUser";
 import type { Route } from "./+types/incident-detail";
 
 function TabCount({ count }: { count: number }) {
@@ -21,33 +26,83 @@ function TabCount({ count }: { count: number }) {
   );
 }
 
-export default function IncidentDetail({ params }: Route.ComponentProps) {
+export async function clientLoader({ params }: Route.ClientLoaderArgs) {
+  try {
+    const [incident, assignableUsers, events] = await Promise.all([
+      api.Incident.getById(params.incidentId),
+      api.User.getAssignable(),
+      api.Incident.getEvents(params.incidentId),
+    ]);
+    return { incident: incident.data, assignableUsers: assignableUsers.data, events: events.data, loadError: null };
+  } catch (error) {
+    const isMissing = isAxiosError(error) && (error.response?.status === 404 || error.response?.status === 400);
+    return {
+      incident: null,
+      assignableUsers: [] as IAssignableUser[],
+      events: [] as IEvent[],
+      loadError: isMissing ? "Incident not found." : "The incident could not be loaded.",
+    };
+  }
+}
+
+function changeErrorMessage(error: unknown) {
+  if (isAxiosError(error) && error.response?.status === 409) {
+    return error.response.data?.title === "Revision conflict"
+      ? "Someone else changed this incident. The page has been refreshed."
+      : "This status change is not allowed.";
+  }
+  if (isAxiosError(error) && error.response?.status === 400 && typeof error.response.data?.detail === "string") {
+    return error.response.data.detail;
+  }
+  return "The change could not be saved. Please try again.";
+}
+
+export default function IncidentDetail({ loaderData }: Route.ComponentProps) {
+  const { incident, assignableUsers, events, loadError } = loaderData;
   const { user } = useAuth();
-  const [allComments, setAllComments] = useState<IComment[]>(comments);
-  const incident = incidents.find((item) => item.incidentId === Number(params.incidentId));
+  const revalidator = useRevalidator();
+  const [allComments, setAllComments] = useState<IComment[]>([]);
+  const [changeError, setChangeError] = useState<{ incidentId: string; message: string } | null>(null);
 
   if (!incident) {
-    return (
-      <Text size="sm" className="p-6 text-text-3">
-        Incident not found.
-      </Text>
-    );
+    return <EmptyState>{loadError}</EmptyState>;
   }
 
-  const incidentEvents = events
-    .filter((event) => event.incidentId === incident.incidentId)
-    .sort((a, b) => a.occurredAtUtc.localeCompare(b.occurredAtUtc));
-
   const incidentComments = allComments
-    .filter((comment) => comment.incidentId === incident.incidentId)
+    .filter((comment) => comment.incidentId === incident.id)
     .sort((a, b) => a.createdAtUtc.localeCompare(b.createdAtUtc));
+
+  const saveChange = async (request: () => Promise<unknown>) => {
+    setChangeError(null);
+    try {
+      await request();
+    } catch (error) {
+      setChangeError({ incidentId: incident.id, message: changeErrorMessage(error) });
+    }
+    await revalidator.revalidate();
+  };
+
+  const changeStatus = (status: IncidentStatus) => {
+    if (status === incident.status) return;
+    saveChange(() => api.Incident.updateStatus(incident.id, status, incident.revisions.status));
+  };
+
+  const changePriority = (priority: IncidentPriority) => {
+    if (priority === incident.priority) return;
+    saveChange(() => api.Incident.updatePriority(incident.id, priority, incident.revisions.priority));
+  };
+
+  const changeAssignee = (assigneeUserId: number | null) => {
+    if (assigneeUserId === incident.assigneeUserId) return;
+    saveChange(() => api.Incident.updateAssignee(incident.id, assigneeUserId, incident.revisions.assignee));
+  };
 
   const addComment = (body: string) => {
     if (!user) return;
 
     const newComment: IComment = {
       commentId: Date.now(),
-      incidentId: incident.incidentId,
+      incidentId: incident.id,
       authorUserId: user.userId,
       authorName: user.name,
       body,
@@ -66,12 +121,26 @@ export default function IncidentDetail({ params }: Route.ComponentProps) {
 
   return (
     <>
-      <IncidentDetailHeader incident={incident} events={incidentEvents} />
+      <IncidentDetailHeader
+        incident={incident}
+        assignableUsers={assignableUsers}
+        onStatusChange={changeStatus}
+        onPriorityChange={changePriority}
+        onAssigneeChange={changeAssignee}
+      />
 
-      <Tabs key={incident.incidentId} defaultValue="overview" color="#0f717d" className="flex min-h-0 flex-1 flex-col">
+      {changeError?.incidentId === incident.id && (
+        <div className="mx-[22px] mt-4 max-[680px]:mx-4">
+          <FormAlert title="Change not saved" message={changeError.message} />
+        </div>
+      )}
+
+      <Tabs key={incident.id} defaultValue="overview" color="#0f717d" className="flex min-h-0 flex-1 flex-col">
         <Tabs.List className="mx-[22px] mt-[22px] max-[680px]:mx-4">
-          <Tabs.Tab value="overview">Overview</Tabs.Tab>
-          <Tabs.Tab value="events" rightSection={<TabCount count={incidentEvents.length} />}>
+          <Tabs.Tab value="overview" leftSection={<IconFileDescription size={14} />}>
+            Overview
+          </Tabs.Tab>
+          <Tabs.Tab value="events" leftSection={<IconTimelineEvent size={14} />} rightSection={<TabCount count={events.length} />}>
             Events
           </Tabs.Tab>
           <Tabs.Tab value="comments" leftSection={<IconMessage size={14} />} rightSection={<TabCount count={incidentComments.length} />}>
@@ -84,7 +153,7 @@ export default function IncidentDetail({ params }: Route.ComponentProps) {
             <IncidentOverview incident={incident} />
           </Tabs.Panel>
           <Tabs.Panel value="events">
-            <EventsTable events={incidentEvents} />
+            {events.length > 0 ? <EventsTable events={events} /> : <EmptyState>No linked events yet.</EmptyState>}
           </Tabs.Panel>
           <Tabs.Panel value="comments">
             <CommentList comments={incidentComments} currentUserId={user?.userId} onEdit={editComment} />

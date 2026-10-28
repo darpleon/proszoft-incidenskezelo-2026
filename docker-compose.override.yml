@@ -9,6 +9,10 @@ services:
     ports: !override
       - "5000:8080"
 
+  simulation:
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+
   frontend:
     ports: !override
       - "3000:80"

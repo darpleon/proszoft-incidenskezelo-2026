@@ -15,8 +15,38 @@ services:
     ports:
       - "5040:8080"
 
+  backend-dev:
+    profiles: ["dev"]
+    image: mcr.microsoft.com/dotnet/sdk:10.0
+    working_dir: /work/incidenskezelo-backend
+    command: dotnet run --no-launch-profile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Server=db;Database=IncidensKezelo;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;
+      - Jwt__Key=${JWT_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "5001:8080"
+    networks:
+      front:
+        aliases: ["backend"]
+      events:
+        aliases: ["backend"]
+      data:
+    volumes:
+      - ./:/work
+      - dev-nuget:/root/.nuget
+      - dev-dotnet:/root/.dotnet
+
   frontend:
     ports: !override
       - "3000:80"
     depends_on:
       - backend
+
+volumes:
+  dev-nuget: {}
+  dev-dotnet: {}

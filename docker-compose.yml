@@ -24,6 +24,7 @@ services:
     entrypoint: ["./migrate"]
     environment:
       - ConnectionStrings__DefaultConnection=Server=db;Database=IncidensKezelo;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;
+      - Jwt__Key=${JWT_KEY}
     depends_on:
       db:
         condition: service_healthy
@@ -42,6 +43,18 @@ services:
         condition: service_healthy
       migrations:
         condition: service_completed_successfully
+    networks:
+      - net
+
+  simulation:
+    build:
+      context: ./szimulacio/backend/
+    image: szimulacio-backend
+    environment:
+      - IncidentApi__BaseUrl=http://backend:8080/
+    depends_on:
+      backend:
+        condition: service_started
     networks:
       - net
 

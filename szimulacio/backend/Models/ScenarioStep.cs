@@ -4,6 +4,8 @@ public class ScenarioStep
 {
     // Ennyi másodpercet várjon ez előtt az esemény előtt.
     public int DelaySeconds { get; set; }
+    //opcionálisan kézzel megadható
+    public DateTime? OccurredAtUtc { get; set; }
 
     public string CorrelationKey { get; set; } = string.Empty;
 

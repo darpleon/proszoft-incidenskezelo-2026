@@ -53,7 +53,7 @@ public class ScenarioRunner
                     ServiceCode = step.ServiceCode,
                     EventType = step.EventType,
                     Severity = step.Severity,
-                    OccurredAtUtc = DateTime.UtcNow,
+                    OccurredAtUtc = step.OccurredAtUtc ?? DateTime.UtcNow,
                     Summary = step.Summary,
                     Payload = step.Payload
                 };

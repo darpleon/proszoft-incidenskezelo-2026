@@ -1,7 +1,7 @@
 import { Badge, Button, Select, Table, Text, Title } from "@mantine/core";
 import { isAxiosError } from "axios";
-import { useEffect, useState } from "react";
-import { redirect } from "react-router";
+import { useState } from "react";
+import { redirect, useRevalidator } from "react-router";
 import api from "~/api/api";
 import { FormAlert } from "~/components/FormAlert";
 import useAuth from "~/hooks/useAuth";
@@ -19,11 +19,16 @@ export function meta({}: Route.MetaArgs) {
   return [{ title: "Users | Incident Manager" }];
 }
 
-export function clientLoader() {
+export async function clientLoader() {
   if (readAuthUser()?.role !== "Admin") {
     throw redirect("/incidents");
   }
-  return null;
+  try {
+    const response = await api.User.getUsers();
+    return { users: response.data, loadError: false };
+  } catch {
+    return { users: [] as IUser[], loadError: true };
+  }
 }
 
 function errorMessage(error: unknown) {
@@ -33,34 +38,23 @@ function errorMessage(error: unknown) {
   return "The change could not be saved. Please try again.";
 }
 
-export default function Users() {
+export default function Users({ loaderData }: Route.ComponentProps) {
+  const { users, loadError } = loaderData;
   const { user: currentUser } = useAuth();
-  const [users, setUsers] = useState<IUser[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const revalidator = useRevalidator();
   const [error, setError] = useState<string | null>(null);
   const [savingUserId, setSavingUserId] = useState<number | null>(null);
 
-  useEffect(() => {
-    api.User.getUsers()
-      .then((response) => setUsers(response.data))
-      .catch(() => setError("The user list could not be loaded."))
-      .finally(() => setIsLoading(false));
-  }, []);
-
-  const replaceUser = (updated: IUser) => {
-    setUsers((current) => current.map((item) => (item.userId === updated.userId ? updated : item)));
-  };
-
-  const runChange = async (userId: number, change: () => Promise<{ data: IUser }>) => {
+  const runChange = async (userId: number, change: () => Promise<unknown>) => {
     setSavingUserId(userId);
     setError(null);
     try {
-      replaceUser((await change()).data);
+      await change();
     } catch (changeError) {
       setError(errorMessage(changeError));
-    } finally {
-      setSavingUserId(null);
     }
+    await revalidator.revalidate();
+    setSavingUserId(null);
   };
 
   const pendingCount = users.filter((item) => item.role === "Pending" && item.isActive).length;
@@ -77,9 +71,10 @@ export default function Users() {
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto px-[22px] pt-4 pb-[22px] max-[920px]:overflow-visible max-[680px]:px-4">
+        {loadError && <FormAlert title="Something went wrong" message="The user list could not be loaded." />}
         {error && <FormAlert title="Something went wrong" message={error} />}
 
-        {!isLoading && (
+        {!loadError && (
           <div className="overflow-x-auto">
             <Table className="min-w-[640px] text-[13px]" verticalSpacing="sm" highlightOnHover>
               <Table.Thead>

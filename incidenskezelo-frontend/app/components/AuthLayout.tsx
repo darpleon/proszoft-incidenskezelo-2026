@@ -1,5 +1,6 @@
 import { Title } from "@mantine/core";
 import type { ReactNode } from "react";
+import { AppLogo } from "./AppLogo";
 
 type AuthLayoutProps = {
   title: string;
@@ -12,7 +13,7 @@ export function AuthLayout({ title, children, footer }: AuthLayoutProps) {
     <main className="flex min-h-dvh items-center justify-center bg-panel px-[22px] py-8 max-[640px]:px-4 max-[640px]:pt-[22px] max-[700px]:items-start">
       <div className="w-full max-w-[364px] max-[640px]:max-w-none">
         <div className="mb-8 flex items-center gap-2.5 max-[640px]:mb-[22px]">
-          <div className="grid size-[26px] place-items-center rounded-[5px] bg-petrol text-xs font-bold text-white">I</div>
+          <AppLogo size={26} />
           <span className="text-sm font-semibold tracking-tight">Incident Manager</span>
         </div>
 

@@ -22,7 +22,9 @@ const theme = createTheme({
 });
 
 export const links: Route.LinksFunction = () => [
-  { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+  { rel: "icon", href: "/favicon.ico?v=2", sizes: "32x32" },
+  { rel: "icon", type: "image/svg+xml", href: "/favicon.svg?v=2" },
+  { rel: "apple-touch-icon", href: "/apple-touch-icon.png?v=2" },
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
   { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
   {

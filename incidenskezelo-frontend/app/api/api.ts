@@ -1,4 +1,6 @@
 import axiosInstance from "./axios.config";
+import { aiRequestTimeoutMs } from "~/constants/constants";
+import type { AiModel, IAiAnalysis } from "~/interfaces/IAiAnalysis";
 import type { IEvent } from "~/interfaces/IEvent";
 import type { IHealth } from "~/interfaces/IHealth";
 import type { ICreateIncidentRequest, IIncident, IncidentPriority, IncidentStatus } from "~/interfaces/IIncident";
@@ -38,6 +40,11 @@ const Event = {
   getLatest: () => axiosInstance.get<IEvent[]>(`/events`),
 };
 
-const api = { Health, User, Incident, Event };
+const Ai = {
+  analyze: (incidentId: string, model: AiModel) =>
+    axiosInstance.post<IAiAnalysis>(`/ai/analyze/${incidentId}`, { model }, { timeout: aiRequestTimeoutMs }),
+};
+
+const api = { Health, User, Incident, Event, Ai };
 
 export default api;

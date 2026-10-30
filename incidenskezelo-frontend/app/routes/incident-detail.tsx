@@ -1,9 +1,10 @@
 import { Tabs } from "@mantine/core";
-import { IconFileDescription, IconMessage, IconTimelineEvent } from "@tabler/icons-react";
+import { IconFileDescription, IconMessage, IconSparkles, IconTimelineEvent } from "@tabler/icons-react";
 import { isAxiosError } from "axios";
 import { useState } from "react";
 import { useRevalidator } from "react-router";
 import api from "~/api/api";
+import { AiAnalysisPanel } from "~/components/AiAnalysisPanel";
 import { CommentForm } from "~/components/CommentForm";
 import { CommentList } from "~/components/CommentList";
 import { EmptyState } from "~/components/EmptyState";
@@ -146,6 +147,9 @@ export default function IncidentDetail({ loaderData }: Route.ComponentProps) {
           <Tabs.Tab value="comments" leftSection={<IconMessage size={14} />} rightSection={<TabCount count={incidentComments.length} />}>
             Comments
           </Tabs.Tab>
+          <Tabs.Tab value="ai" leftSection={<IconSparkles size={14} />}>
+            AI analysis
+          </Tabs.Tab>
         </Tabs.List>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-[22px] max-[920px]:overflow-visible max-[680px]:px-4">
@@ -160,6 +164,9 @@ export default function IncidentDetail({ loaderData }: Route.ComponentProps) {
             <div className="mt-4 border-t border-line pt-4">
               <CommentForm onSubmit={addComment} />
             </div>
+          </Tabs.Panel>
+          <Tabs.Panel value="ai">
+            <AiAnalysisPanel incidentId={incident.id} events={events} />
           </Tabs.Panel>
         </div>
       </Tabs>

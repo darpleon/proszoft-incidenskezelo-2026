@@ -1,16 +1,17 @@
 ﻿
+using incidenskezelo_backend.Models.AI;
 using incidenskezelo_backend.Services.AI;
 using Microsoft.AspNetCore.Mvc;
 
 namespace incidenskezelo_backend.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
-public class GeminiController : ControllerBase
+[Route("api/ai")]
+public class AiController : ControllerBase
 {
     private readonly IIncidentAnalysisService _incidentAnalysisService;
 
-    public GeminiController(IIncidentAnalysisService incidentAnalysisService)
+    public AiController(IIncidentAnalysisService incidentAnalysisService)
     {
         _incidentAnalysisService = incidentAnalysisService;
     }
@@ -19,15 +20,17 @@ public class GeminiController : ControllerBase
     [HttpPost("analyze/{incidentId}")]
     public async Task<IActionResult> Analyze(
         Guid incidentId,
+        [FromBody] AnalyzeIncidentRequest request,
         CancellationToken cancellationToken)
     {
         if (incidentId == Guid.Empty)
         {
-            return BadRequest("Az incidens azonosítója kötelező.");
+            return BadRequest("The incident ID is required.");
         }
 
         var result = await _incidentAnalysisService.AnalyzeAsync(
             incidentId,
+            request.Model,
             cancellationToken);
 
         return Ok(new

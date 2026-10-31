@@ -6,7 +6,7 @@ using incidenskezelo_backend.Services;
 namespace incidenskezelo_backend.Services.AI;
 
 public sealed class IncidentAnalysisService(
-    IAiService aiService,
+    AiServiceResolver aiServiceResolver,
     IIncidentService incidentService) : IIncidentAnalysisService
 {
     private const int MaxToolRounds = 5;
@@ -16,7 +16,7 @@ public sealed class IncidentAnalysisService(
     [
         new AiToolDefinition(
             GetIncidentDetailsName,
-            "Lekéri az éppen elemzett incidens adatait.",
+            "Retrieves the details of the incident being analyzed.",
             """
             {
               "type": "object",
@@ -28,12 +28,14 @@ public sealed class IncidentAnalysisService(
 
     public async Task<string> AnalyzeAsync(
         Guid incidentId,
+        AiProvider provider,
         CancellationToken cancellationToken = default)
     {
+        var aiService = aiServiceResolver.Resolve(provider);
         var prompt = $"""
             {IncidentAnalysisPrompt.SystemPrompt}
 
-            Az elemzendő incidens azonosítója:
+            Incident ID to analyze:
             {incidentId}
             """;
 
@@ -54,7 +56,7 @@ public sealed class IncidentAnalysisService(
                 if (string.IsNullOrWhiteSpace(response.Text))
                 {
                     throw new InvalidOperationException(
-                        "Az AI nem adott vissza szöveges elemzést.");
+                        "The AI did not return a text analysis.");
                 }
 
                 return response.Text;
@@ -63,7 +65,7 @@ public sealed class IncidentAnalysisService(
             if (response.ProviderState is null)
             {
                 throw new InvalidOperationException(
-                    "Az AI eszközhívási válaszából hiányzik a folytatási állapot.");
+                    "The AI tool call response is missing the continuation state.");
             }
 
             var results = new List<AiToolResult>();
@@ -72,7 +74,7 @@ public sealed class IncidentAnalysisService(
                 if (toolCall.Name != GetIncidentDetailsName)
                 {
                     throw new NotSupportedException(
-                        $"Nem támogatott AI-eszköz: {toolCall.Name}");
+                        $"Unsupported AI tool: {toolCall.Name}");
                 }
 
                 var incident = await incidentService.GetByIdAsync(
@@ -99,6 +101,6 @@ public sealed class IncidentAnalysisService(
         }
 
         throw new InvalidOperationException(
-            $"Az AI túllépte a megengedett {MaxToolRounds} eszközhívási kört.");
+            $"The AI exceeded the maximum of {MaxToolRounds} tool-call rounds.");
     }
 }

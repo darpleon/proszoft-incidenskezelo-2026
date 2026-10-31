@@ -32,7 +32,7 @@ public sealed class GeminiService(
                 string.IsNullOrWhiteSpace(interactionIdElement.GetString()))
             {
                 throw new InvalidOperationException(
-                    "A Gemini folytatásához hiányzik az interactionId.");
+                    "The interactionId is required to continue the Gemini interaction.");
             }
 
             body["previous_interaction_id"] = interactionIdElement.GetString();
@@ -63,7 +63,7 @@ public sealed class GeminiService(
             if (string.IsNullOrWhiteSpace(request.Prompt))
             {
                 throw new InvalidOperationException(
-                    "Az első Gemini-körhöz prompt szükséges.");
+                    "A prompt is required for the first Gemini turn.");
             }
 
             body["input"] = request.Prompt;
@@ -83,7 +83,7 @@ public sealed class GeminiService(
                 ["description"] = tool.Description,
                 ["parameters"] = JsonNode.Parse(tool.ParametersSchemaJson)
                     ?? throw new InvalidOperationException(
-                        $"Érvénytelen paraméterséma: {tool.Name}")
+                        $"Invalid parameter schema: {tool.Name}")
             });
         }
 
@@ -118,7 +118,7 @@ public sealed class GeminiService(
             string.IsNullOrWhiteSpace(responseIdElement.GetString()))
         {
             throw new InvalidOperationException(
-                "A Gemini válaszából hiányzik az interakció azonosítója.");
+                "The interaction ID is missing from the Gemini response.");
         }
 
         var toolCalls = new List<AiToolCall>();

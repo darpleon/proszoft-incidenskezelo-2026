@@ -3,6 +3,10 @@ services:
     ports:
       - "1433:1433"
 
+  rabbitmq:
+    ports:
+      - "15672:15672"
+
   backend:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development

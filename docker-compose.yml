@@ -31,6 +31,20 @@ services:
     networks:
       - data
 
+  rabbitmq:
+    image: rabbitmq:4-management
+    environment:
+      - RABBITMQ_DEFAULT_USER=rabbitmq
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 15s
+    networks:
+      - events
+
   backend:
     build:
       context: ./incidenskezelo-backend/

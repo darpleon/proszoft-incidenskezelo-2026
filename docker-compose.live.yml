@@ -1,0 +1,37 @@
+include:
+  - docker-compose.yml
+  - docker-compose.override.yml
+
+services:
+  backend:
+    build:
+      context: ./incidenskezelo-backend/
+      dockerfile: Dockerfile.dev
+    image: incidenskezelo-backend:dev
+    working_dir: /work/incidenskezelo-backend
+    command: dotnet watch run --no-launch-profile
+    volumes:
+      - ./:/work
+      - dev-nuget:/root/.nuget
+      - dev-dotnet:/root/.dotnet
+
+  simulation:
+    build:
+      context: ./szimulacio/backend/
+      dockerfile: Dockerfile.dev
+    image: szimulacio-backend:dev
+    working_dir: /work/szimulacio/backend
+    command: dotnet watch run --no-launch-profile
+    volumes:
+      - ./:/work
+      - dev-nuget:/root/.nuget
+      - dev-dotnet:/root/.dotnet
+
+  frontend:
+    # !override is not honored in files pulled in via include. Repeated here.
+    ports: !override
+      - "3000:80"
+
+volumes:
+  dev-nuget: {}
+  dev-dotnet: {}

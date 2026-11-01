@@ -67,10 +67,12 @@ services:
       context: ./szimulacio/backend/
     image: szimulacio-backend
     environment:
-      - IncidentApi__BaseUrl=http://backend:8080/
+      - RabbitMQ__HostName=rabbitmq
+      - RabbitMQ__UserName=rabbitmq
+      - RabbitMQ__Password=${RABBITMQ_PASSWORD}
     depends_on:
-      backend:
-        condition: service_started
+      rabbitmq:
+        condition: service_healthy
     ports:
       - "5161:8080"
     networks:

@@ -1,9 +1,7 @@
-﻿using System.Net;
-using backend.Configuration;
+using backend.Contracts;
 using backend.Models;
 using backend.Services;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using System.Text.Json;
 
 namespace szimulacio.Tests.Services;
@@ -14,15 +12,9 @@ public class ScenarioRunnerTests
     [TestMethod]
     public async Task TryStart_ScenarioAlreadyRunning_ReturnsFalse()
     {
-        var handler = new BlockingHttpMessageHandler();
-        var httpClient = new HttpClient(handler);
-        var options = Options.Create(new IncidentApiOptions
-        {
-            BaseUrl = "http://localhost"
-        });
-        var incidentApiClient = new IncidentApiClient(httpClient, options);
+        var publisher = new BlockingEventPublisher();
         var scenarioRunner = new ScenarioRunner(
-            incidentApiClient,
+            publisher,
             NullLogger<ScenarioRunner>.Instance);
         var scenario = new Scenario
         {
@@ -46,16 +38,13 @@ public class ScenarioRunnerTests
         {
             Assert.IsTrue(scenarioRunner.TryStart(scenario));
 
-            var requestBody = await handler.RequestBody.WaitAsync(TimeSpan.FromSeconds(5));
+            var publishedEvent = await publisher.PublishedEvent.WaitAsync(TimeSpan.FromSeconds(5));
 
-            using var document = JsonDocument.Parse(requestBody);
-            var root = document.RootElement;
-
-            Assert.AreEqual("payment-gw", root.GetProperty("serviceCode").GetString());
-            Assert.AreEqual("HighLatency", root.GetProperty("eventType").GetString());
-            Assert.AreEqual("Warning", root.GetProperty("severity").GetString());
-            Assert.AreEqual("Test scenario event", root.GetProperty("summary").GetString());
-            Assert.AreEqual("test-correlation", root.GetProperty("correlationKey").GetString());
+            Assert.AreEqual("payment-gw", publishedEvent.ServiceCode);
+            Assert.AreEqual(EventType.HighLatency, publishedEvent.EventType);
+            Assert.AreEqual(Severity.Warning, publishedEvent.Severity);
+            Assert.AreEqual("Test scenario event", publishedEvent.Summary);
+            Assert.AreEqual("test-correlation", publishedEvent.CorrelationKey);
 
             Assert.IsFalse(scenarioRunner.TryStart(scenario));
 
@@ -63,36 +52,65 @@ public class ScenarioRunnerTests
         }
         finally
         {
-            handler.ReleaseRequest();
-            httpClient.Dispose();
+            publisher.Release();
         }
     }
 
-    private sealed class BlockingHttpMessageHandler : HttpMessageHandler
+    [TestMethod]
+    public void CreateEventRequest_SerializesToPinnedWireShape()
     {
-        private readonly TaskCompletionSource<string> _requestBody =
-            new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        private readonly TaskCompletionSource _releaseRequest =
-            new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        public Task<string> RequestBody => _requestBody.Task;
-
-        public void ReleaseRequest()
+        var request = new CreateEventRequest
         {
-            _releaseRequest.TrySetResult();
+            ServiceCode = "payment-gw",
+            EventType = "HighLatency",
+            Severity = "Warning",
+            OccurredAtUtc = new DateTime(2026, 11, 1, 12, 0, 0, DateTimeKind.Utc),
+            Summary = "Test scenario event",
+            CorrelationKey = "test-correlation",
+        };
+
+        using var document = JsonDocument.Parse(
+            JsonSerializer.SerializeToUtf8Bytes(
+                request,
+                new JsonSerializerOptions(JsonSerializerDefaults.Web)));
+
+        var root = document.RootElement;
+
+        CollectionAssert.AreEqual(
+            new[] { "serviceCode", "eventType", "severity", "occurredAtUtc", "summary", "payload", "correlationKey" },
+            root.EnumerateObject().Select(property => property.Name).ToArray());
+
+        Assert.AreEqual("payment-gw", root.GetProperty("serviceCode").GetString());
+        Assert.AreEqual("HighLatency", root.GetProperty("eventType").GetString());
+        Assert.AreEqual("Warning", root.GetProperty("severity").GetString());
+        Assert.AreEqual("Test scenario event", root.GetProperty("summary").GetString());
+        Assert.AreEqual("test-correlation", root.GetProperty("correlationKey").GetString());
+    }
+
+    private sealed class BlockingEventPublisher : IEventPublisher
+    {
+        private readonly TaskCompletionSource<SimulationEvent> _publishedEvent =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        private readonly TaskCompletionSource _release =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task<SimulationEvent> PublishedEvent => _publishedEvent.Task;
+
+        public void Release()
+        {
+            _release.TrySetResult();
         }
 
-        protected override async Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
+        public async Task<EventPublishResult> PublishAsync(
+            SimulationEvent simulatedEvent,
             CancellationToken cancellationToken)
         {
-            var body = await request.Content!.ReadAsStringAsync(cancellationToken);
-            _requestBody.TrySetResult(body);
+            _publishedEvent.TrySetResult(simulatedEvent);
 
-            await _releaseRequest.Task.WaitAsync(cancellationToken);
+            await _release.Task.WaitAsync(cancellationToken);
 
-            return new HttpResponseMessage(HttpStatusCode.Accepted);
+            return new EventPublishResult(EventPublishStatus.Published);
         }
     }
 }

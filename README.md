@@ -4,19 +4,37 @@ A projekt célja egy többfelhasználós incidenskezelő rendszer megtervezése 
 
 ---
 
-## Build and run
+## Build via docker compose
 
-**via docker compose**
+> `.env` must contain `MSSQL_SA_PASSWORD` and `JWT_KEY`
+
+### Development version
 ```
-# build and run
 docker compose up --build
 
-# run
+# If already built
 docker compose up
 ```
-(automatically picks up dev settings from `docker-compose.override.yml`)
 
-**prod:**
+Ports exposed:
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:5000
+- Simulation: http://localhost:5040
+- MSSQL: localhost,1433
+
+#### Live builds
+Runs the backend and simulation from your working tree with `dotnet watch`; source changes rebuild automatically.
 ```
-docker compose -f docker-compose.yml up --build
+    docker compose -f docker-compose.live.yml up -d
 ```
+
+### Production version
+```
+    docker compose -f docker-compose.yml up --build
+```
+
+Ports exposed:
+- Frontend: http://localhost:80
+- Simulation: http://localhost:5040
+
+(backend and db are not exposed to the host in production)

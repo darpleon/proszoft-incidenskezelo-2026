@@ -12,26 +12,32 @@ public class EventsController : ControllerBase
     private const int LatestEventCount = 100;
 
     private readonly EventService _eventService;
+    private readonly EventIngestService _ingestService;
 
-    public EventsController(EventService eventService)
+    public EventsController(EventService eventService, EventIngestService ingestService)
     {
         _eventService = eventService;
+        _ingestService = ingestService;
     }
 
 
     [HttpPost]
     [AllowAnonymous]
-    public async Task<IActionResult> Create(
-        [FromBody] CreateEventRequest request,
-        CancellationToken cancellationToken)
+    public async Task<IActionResult> Create(CancellationToken cancellationToken)
     {
-        var result = await _eventService.IngestAsync(request, cancellationToken);
+        using var body = new MemoryStream();
+        await Request.Body.CopyToAsync(body, cancellationToken);
 
-        return result.Status switch
+        var outcome = await _ingestService.IngestAsync(body.ToArray(), cancellationToken);
+
+        return outcome.Status switch
         {
-            EventIngestStatus.Created => CreatedAtAction(nameof(GetById), new { eventId = result.Event!.EventId }, result.Event),
-            EventIngestStatus.AlreadyReceived => Ok(result.Event),
-            _ => Problem(result.Error, statusCode: StatusCodes.Status400BadRequest),
+            EventIngestOutcomeStatus.Created => CreatedAtAction(
+                nameof(GetById), new { eventId = outcome.Event!.EventId }, outcome.Event),
+            EventIngestOutcomeStatus.AlreadyReceived => Ok(outcome.Event),
+            EventIngestOutcomeStatus.TransientFailed => Problem(
+                outcome.Error, statusCode: StatusCodes.Status503ServiceUnavailable),
+            _ => Problem(outcome.Error, statusCode: StatusCodes.Status400BadRequest),
         };
     }
 

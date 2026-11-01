@@ -52,11 +52,16 @@ services:
     environment:
       - ConnectionStrings__DefaultConnection=Server=db;Database=IncidensKezelo;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;
       - Jwt__Key=${JWT_KEY}
+      - RabbitMQ__HostName=rabbitmq
+      - RabbitMQ__UserName=rabbitmq
+      - RabbitMQ__Password=${RABBITMQ_PASSWORD}
     depends_on:
       db:
         condition: service_healthy
       migrations:
         condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
     networks:
       - front
       - events

@@ -27,3 +27,18 @@ public sealed record AiTurnResponse(
     string? Text,
     IReadOnlyList<AiToolCall> ToolCalls,
     JsonElement? ProviderState);
+
+public sealed record AiToolCallStatus(string Name, bool Succeeded);
+
+public sealed record ProbableCause(
+    string Description,
+    string Confidence);
+
+public sealed record IncidentAnalysisResult(
+    string Model,
+    string Summary,
+    IReadOnlyList<ProbableCause> ProbableCauses,
+    IReadOnlyList<string> SuggestedActions,
+    IReadOnlyList<long> RelevantEventIds,
+    IReadOnlyList<string> Limitations,
+    IReadOnlyList<AiToolCallStatus> ToolCalls);

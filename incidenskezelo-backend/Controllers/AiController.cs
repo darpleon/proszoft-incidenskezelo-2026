@@ -36,7 +36,13 @@ public class AiController : ControllerBase
         return Ok(new
         {
             incidentId,
-            analysis = result
+            model = result.Model,
+            summary = result.Summary,
+            probableCauses = result.ProbableCauses,
+            suggestedActions = result.SuggestedActions,
+            relevantEventIds = result.RelevantEventIds,
+            limitations = result.Limitations,
+            toolCalls = result.ToolCalls
         });
     }
 }

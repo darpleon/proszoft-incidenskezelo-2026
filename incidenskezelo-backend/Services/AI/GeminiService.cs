@@ -67,10 +67,6 @@ public sealed class GeminiService(
             }
 
             body["input"] = request.Prompt;
-            body["generation_config"] = new JsonObject
-            {
-                ["tool_choice"] = "any"
-            };
         }
 
         var tools = new JsonArray();

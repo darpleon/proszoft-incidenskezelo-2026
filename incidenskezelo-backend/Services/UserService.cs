@@ -120,6 +120,16 @@ public class UserService
     }
 
 
+    public async Task<List<AssignableUserResponse>> GetAssignableAsync(CancellationToken cancellationToken)
+    {
+        return await _dbContext.Users
+            .Where(user => user.IsActive && user.Role != UserRole.Pending)
+            .OrderBy(user => user.Name)
+            .Select(user => new AssignableUserResponse { UserId = user.UserId, Name = user.Name })
+            .ToListAsync(cancellationToken);
+    }
+
+
     public async Task<UserResponse?> GetByIdAsync(int userId, CancellationToken cancellationToken)
     {
         var user = await _dbContext.Users.FindAsync([userId], cancellationToken);

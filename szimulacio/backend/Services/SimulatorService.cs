@@ -69,7 +69,6 @@ public class SimulatorService
         // A kiválasztott sablonból létrehozunk egy új eseményt
         var simulatedEvent = new SimulationEvent
         {
-            EventId = Guid.NewGuid(),
 
             ServiceCode = template.ServiceCode,
 
@@ -84,19 +83,6 @@ public class SimulatorService
             Payload = template.Payload
         };
 
-        _eventsGenerated++;
-
         return simulatedEvent;
-    }
-
-    public SimulatorStatus GetStatus()
-    {
-        return new SimulatorStatus
-        {
-            InstanceId = "local-simulator",
-            Running = true,
-            EventsGenerated = _eventsGenerated,
-            IntervalSeconds = 5
-        };
     }
 }

@@ -1,13 +1,17 @@
+using incidenskezelo_backend.Auth;
+using incidenskezelo_backend.Contracts;
 using incidenskezelo_backend.Models.Incident;
 using incidenskezelo_backend.Models.Incident.Changes;
 using incidenskezelo_backend.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace incidenskezelo_backend.Controllers;
 
 [ApiController]
 [Route("api/incidents")]
-public class IncidentsController(IIncidentService incidentService) : ControllerBase
+[Authorize(Policy = AuthPolicies.CanHandleIncidents)]
+public class IncidentsController(IIncidentService incidentService, EventService eventService) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(typeof(List<IncidentResponse>), StatusCodes.Status200OK)]
@@ -40,8 +44,15 @@ public class IncidentsController(IIncidentService incidentService) : ControllerB
             return Invalid(errors);
         }
 
-        var incident = await incidentService.CreateAsync(request, ct);
-        return CreatedAtAction(nameof(GetById), new { id = incident.Id }, incident);
+        try
+        {
+            var incident = await incidentService.CreateAsync(request, CurrentUserId(), ct);
+            return CreatedAtAction(nameof(GetById), new { id = incident.Id }, incident);
+        }
+        catch (ArgumentException ex)
+        {
+            return Invalid([ex.Message]);
+        }
     }
 
     [HttpPatch("{id}/title")]
@@ -64,7 +75,7 @@ public class IncidentsController(IIncidentService incidentService) : ControllerB
 
         try
         {
-            var incident = await incidentService.UpdateTitleAsync(id, request.Title, expectedRevision, ct);
+            var incident = await incidentService.UpdateTitleAsync(id, request.Title, expectedRevision, CurrentUserId(), ct);
             return incident is null ? Missing(id) : incident;
         }
         catch (RevisionConflictException ex)
@@ -93,7 +104,7 @@ public class IncidentsController(IIncidentService incidentService) : ControllerB
 
         try
         {
-            var incident = await incidentService.UpdateDescriptionAsync(id, request.Description, expectedRevision, ct);
+            var incident = await incidentService.UpdateDescriptionAsync(id, request.Description, expectedRevision, CurrentUserId(), ct);
             return incident is null ? Missing(id) : incident;
         }
         catch (RevisionConflictException ex)
@@ -116,8 +127,36 @@ public class IncidentsController(IIncidentService incidentService) : ControllerB
 
         try
         {
-            var incident = await incidentService.UpdatePriorityAsync(id, request.Priority, expectedRevision, ct);
+            var incident = await incidentService.UpdatePriorityAsync(id, request.Priority, expectedRevision, CurrentUserId(), ct);
             return incident is null ? Missing(id) : incident;
+        }
+        catch (RevisionConflictException ex)
+        {
+            return RevisionConflict(ex);
+        }
+    }
+
+    [HttpPatch("{id}/assignee")]
+    [ProducesResponseType(typeof(IncidentResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<IncidentResponse>> UpdateAssignee(Guid id, UpdateAssigneeRequest request, CancellationToken ct)
+    {
+        if (request.ExpectedRevision is not { } expectedRevision)
+        {
+            return Invalid(["expectedRevision is required."]);
+        }
+
+        try
+        {
+            var incident = await incidentService.UpdateAssigneeAsync(id, request.AssigneeUserId, expectedRevision, CurrentUserId(), ct);
+            return incident is null ? Missing(id) : incident;
+        }
+        catch (ArgumentException ex)
+        {
+            return Invalid([ex.Message]);
         }
         catch (RevisionConflictException ex)
         {
@@ -139,7 +178,7 @@ public class IncidentsController(IIncidentService incidentService) : ControllerB
 
         try
         {
-            var incident = await incidentService.TransitionAsync(id, request.Status, expectedRevision, ct);
+            var incident = await incidentService.TransitionAsync(id, request.Status, expectedRevision, CurrentUserId(), ct);
             return incident is null ? Missing(id) : incident;
         }
         catch (RevisionConflictException ex)
@@ -157,6 +196,16 @@ public class IncidentsController(IIncidentService incidentService) : ControllerB
         }
     }
 
+    [HttpGet("{id}/events")]
+    [ProducesResponseType(typeof(List<EventResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<List<EventResponse>>> GetEvents(Guid id, CancellationToken ct)
+    {
+        var events = await eventService.GetByIncidentAsync(id, ct);
+        return events is null ? Missing(id) : events;
+    }
+
     [HttpGet("{id}/history")]
     [ProducesResponseType(typeof(List<IncidentChangeResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
@@ -165,6 +214,11 @@ public class IncidentsController(IIncidentService incidentService) : ControllerB
     {
         var history = await incidentService.GetHistoryAsync(id, ct);
         return history is null ? Missing(id) : history;
+    }
+
+    private int CurrentUserId()
+    {
+        return int.Parse(User.FindFirst(TokenClaims.UserId)!.Value);
     }
 
     private static void Collect(List<string> errors, string? error)

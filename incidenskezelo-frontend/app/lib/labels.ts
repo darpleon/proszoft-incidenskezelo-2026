@@ -2,11 +2,21 @@ import type { EventSeverity } from "~/interfaces/IEvent";
 import type { IncidentPriority, IncidentStatus } from "~/interfaces/IIncident";
 
 export const statusLabels: Record<IncidentStatus, string> = {
-  New: "New",
+  Open: "Open",
   Investigating: "Investigating",
   InProgress: "In progress",
+  Verifying: "Verifying",
   Resolved: "Resolved",
-  Closed: "Closed",
+  Declined: "Declined",
+};
+
+export const allowedNextStatuses: Record<IncidentStatus, IncidentStatus[]> = {
+  Open: ["Investigating", "Declined"],
+  Investigating: ["InProgress", "Declined"],
+  InProgress: ["Verifying", "Declined"],
+  Verifying: ["Resolved", "InProgress"],
+  Resolved: ["InProgress"],
+  Declined: ["InProgress"],
 };
 
 export const priorityLabels: Record<IncidentPriority, string> = {
@@ -24,11 +34,12 @@ export const priorityColors: Record<IncidentPriority, string> = {
 };
 
 export const statusTextColors: Record<IncidentStatus, string> = {
-  New: "text-text-3",
+  Open: "text-text-3",
   Investigating: "text-high",
   InProgress: "text-petrol",
+  Verifying: "text-med",
   Resolved: "text-ok",
-  Closed: "text-text-3",
+  Declined: "text-text-3",
 };
 
 export const priorityTextColors: Record<IncidentPriority, string> = {
@@ -39,20 +50,30 @@ export const priorityTextColors: Record<IncidentPriority, string> = {
 };
 
 export function isOpen(status: IncidentStatus) {
-  return status !== "Resolved" && status !== "Closed";
+  return status !== "Resolved" && status !== "Declined";
 }
 
-export const severityLabels: Record<EventSeverity, string> = priorityLabels;
+export const severityLabels: Record<EventSeverity, string> = {
+  Info: "Info",
+  Warning: "Warning",
+  Error: "Error",
+  Critical: "Critical",
+};
 
-export const severityTextColors: Record<EventSeverity, string> = priorityTextColors;
+export const severityTextColors: Record<EventSeverity, string> = {
+  Info: "text-low",
+  Warning: "text-med",
+  Error: "text-high",
+  Critical: "text-crit",
+};
 
 export const eventTypeLabels: Record<string, string> = {
-  DbConnectionError: "Database connection error",
+  ServiceDown: "Service down",
+  ServiceRecovered: "Service recovered",
   HighLatency: "High latency",
-  ErrorRateIncrease: "Increased error rate",
+  HighErrorRate: "High error rate",
+  DbConnectionError: "Database connection error",
   JobFailed: "Background job failed",
   CapacityIssue: "Capacity issue",
-  ServiceRecovered: "Service recovered",
-  CertificateExpiring: "Certificate expiring",
   DependencyFailure: "Dependency failure",
 };

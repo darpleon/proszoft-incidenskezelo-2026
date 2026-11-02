@@ -8,6 +8,7 @@ export default [
   layout("routes/layout.tsx", [
     route("incidents", "routes/incidents.tsx", [
       index("routes/incidents-index.tsx"),
+      route("new", "routes/incident-new.tsx"),
       route(":incidentId", "routes/incident-detail.tsx"),
     ]),
     route("events", "routes/events.tsx"),

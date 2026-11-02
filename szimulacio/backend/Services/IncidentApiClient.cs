@@ -19,13 +19,13 @@ public class IncidentApiClient
     {
         var body = new
         {
-            sourceEventId = simulatedEvent.EventId.ToString(),
             serviceCode = simulatedEvent.ServiceCode,
             eventType = simulatedEvent.EventType.ToString(),
             severity = simulatedEvent.Severity.ToString(),
             occurredAtUtc = simulatedEvent.OccurredAtUtc,
             summary = simulatedEvent.Summary,
             payload = simulatedEvent.Payload,
+            correlationKey = simulatedEvent.CorrelationKey,
         };
 
         return await _httpClient.PostAsJsonAsync("api/events", body, cancellationToken);

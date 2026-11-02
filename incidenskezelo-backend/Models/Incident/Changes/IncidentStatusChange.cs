@@ -4,8 +4,8 @@ public class IncidentStatusChange : IncidentChange<IncidentStatus>
 {
     private IncidentStatusChange() { }
 
-    internal IncidentStatusChange(Incident incident, IncidentStatus from, IncidentStatus to, DateTime at)
-        : base(incident, from, to, at)
+    internal IncidentStatusChange(Incident incident, IncidentStatus from, IncidentStatus to, ChangeContext context)
+        : base(incident, from, to, context)
     {
     }
 }

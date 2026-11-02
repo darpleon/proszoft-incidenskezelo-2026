@@ -1,6 +1,8 @@
 using incidenskezelo_backend.Contracts;
 using incidenskezelo_backend.Data;
 using incidenskezelo_backend.Models;
+using incidenskezelo_backend.Models.Incident;
+using incidenskezelo_backend.Models.Incident.Changes;
 using incidenskezelo_backend.Services;
 using incidenskezelo_backend.Tests.Helpers;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -32,7 +34,7 @@ public class EventServiceTests
     [TestMethod]
     public async Task IngestAsync_ValidEvent_StoresEvent()
     {
-        var request = CreateRequest(sourceEventId: "evt-1", serviceCode: "orders-api");
+        var request = CreateRequest(serviceCode: "orders-api");
 
         var result = await _eventService.IngestAsync(request, CancellationToken.None);
 
@@ -40,7 +42,7 @@ public class EventServiceTests
         Assert.AreEqual(1, _dbContext.Events.Count());
 
         var stored = _dbContext.Events.Single();
-        Assert.AreEqual("evt-1", stored.SourceEventId);
+        Assert.AreEqual(64, stored.SourceEventId.Length);
         Assert.AreEqual(EventType.HighLatency, stored.EventType);
         Assert.AreEqual(Severity.Warning, stored.Severity);
         Assert.AreNotEqual(default, stored.ReceivedAtUtc);
@@ -48,11 +50,11 @@ public class EventServiceTests
 
 
     [TestMethod]
-    public async Task IngestAsync_SameSourceEventIdTwice_StoresOnlyOneEvent()
+    public async Task IngestAsync_SameContentTwice_StoresOnlyOneEvent()
     {
-        var first = await _eventService.IngestAsync(CreateRequest(sourceEventId: "evt-1"), CancellationToken.None);
+        var first = await _eventService.IngestAsync(CreateRequest(), CancellationToken.None);
 
-        var second = await _eventService.IngestAsync(CreateRequest(sourceEventId: "evt-1"), CancellationToken.None);
+        var second = await _eventService.IngestAsync(CreateRequest(), CancellationToken.None);
 
         Assert.AreEqual(EventIngestStatus.Created, first.Status);
         Assert.AreEqual(EventIngestStatus.AlreadyReceived, second.Status);
@@ -90,6 +92,33 @@ public class EventServiceTests
 
 
     [TestMethod]
+    public async Task GetByIncidentAsync_LinkedEvents_ReturnsOnlyThoseEvents()
+    {
+        await _eventService.IngestAsync(CreateRequest(summary: "linked"), CancellationToken.None);
+        await _eventService.IngestAsync(CreateRequest(summary: "other"), CancellationToken.None);
+        var incident = Incident.Create("Orders API errors", "POST /orders returns 500.", IncidentPriority.High, new ChangeContext(DateTime.UtcNow, null));
+        incident.Events.Add(_dbContext.Events.Single(evt => evt.Summary == "linked"));
+        _dbContext.Incidents.Add(incident);
+        await _dbContext.SaveChangesAsync();
+
+        var events = await _eventService.GetByIncidentAsync(incident.PublicId, CancellationToken.None);
+
+        Assert.AreEqual(1, events!.Count);
+        Assert.AreEqual("linked", events[0].Summary);
+        Assert.AreEqual(incident.PublicId, events[0].IncidentId);
+    }
+
+
+    [TestMethod]
+    public async Task GetByIncidentAsync_UnknownIncident_ReturnsNull()
+    {
+        var events = await _eventService.GetByIncidentAsync(Guid.NewGuid(), CancellationToken.None);
+
+        Assert.IsNull(events);
+    }
+
+
+    [TestMethod]
     public async Task GetByIdAsync_UnknownId_ReturnsNull()
     {
         var result = await _eventService.GetByIdAsync(999, CancellationToken.None);
@@ -99,19 +128,18 @@ public class EventServiceTests
 
 
     private static CreateEventRequest CreateRequest(
-        string sourceEventId = "evt-1",
         string serviceCode = "orders-api",
         string eventType = "HighLatency",
-        string severity = "Warning")
+        string severity = "Warning",
+        string summary = "Response time above threshold")
     {
         return new CreateEventRequest
         {
-            SourceEventId = sourceEventId,
             ServiceCode = serviceCode,
             EventType = eventType,
             Severity = severity,
             OccurredAtUtc = new DateTime(2026, 10, 14, 12, 0, 0, DateTimeKind.Utc),
-            Summary = "Response time above threshold",
+            Summary = summary,
         };
     }
 }

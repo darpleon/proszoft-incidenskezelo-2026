@@ -1,5 +1,4 @@
 import { NavLink } from "react-router";
-import { services } from "~/data/services";
 import type { IIncident } from "~/interfaces/IIncident";
 import { formatAge } from "~/lib/format";
 import { priorityColors, statusLabels } from "~/lib/labels";
@@ -9,11 +8,9 @@ type IncidentListItemProps = {
 };
 
 export function IncidentListItem({ incident }: IncidentListItemProps) {
-  const service = services.find((item) => item.serviceId === incident.serviceId);
-
   return (
     <NavLink
-      to={`/incidents/${incident.incidentId}`}
+      to={`/incidents/${incident.id}`}
       className={({ isActive }) =>
         `group relative block py-2.5 pr-4 pl-[13px] transition-colors motion-reduce:transition-none ${
           isActive ? "bg-panel" : "hover:bg-[#eff2f0]"
@@ -31,7 +28,6 @@ export function IncidentListItem({ incident }: IncidentListItemProps) {
         ) : (
           <span>{statusLabels[incident.status]}</span>
         )}
-        {service && <span>{service.code}</span>}
         <span className="ml-auto text-text-3" suppressHydrationWarning>
           {formatAge(incident.createdAtUtc)}
         </span>

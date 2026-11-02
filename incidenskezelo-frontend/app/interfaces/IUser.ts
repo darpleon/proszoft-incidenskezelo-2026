@@ -21,3 +21,8 @@ export interface ILoginResponse {
   expiresAtUtc: string;
   user: IUser;
 }
+
+export interface IAssignableUser {
+  userId: number;
+  name: string;
+}

@@ -1,0 +1,35 @@
+{
+  "id": "payment-outage",
+  "name": "Fizetési szolgáltatás leállása",
+  "steps": [
+    {
+      "delaySeconds": 0,
+      "correlationKey": "payment-outage",
+      "serviceCode": "payment-gw",
+      "eventType": "HighLatency",
+      "severity": "Error",
+      "summary": "Lassul a fizetési szolgáltatás",
+      "payload": {
+        "p95Ms": 1800
+      }
+    },
+    {
+      "delaySeconds": 30,
+      "correlationKey": "payment-outage",
+      "serviceCode": "payment-gw",
+      "eventType": "ServiceDown",
+      "severity": "Critical",
+      "summary": "A fizetési szolgáltatás leállt",
+      "payload": null
+    },
+    {
+      "delaySeconds": 120,
+      "correlationKey": "payment-outage",
+      "serviceCode": "payment-gw",
+      "eventType": "ServiceRecovered",
+      "severity": "Info",
+      "summary": "A fizetési szolgáltatás helyreállt",
+      "payload": null
+    }
+  ]
+}

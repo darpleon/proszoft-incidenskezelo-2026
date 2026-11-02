@@ -4,8 +4,8 @@ public class IncidentDescriptionChange : IncidentChange<string>
 {
     private IncidentDescriptionChange() { }
 
-    internal IncidentDescriptionChange(Incident incident, string oldDescription, string newDescription, DateTime at)
-        : base(incident, oldDescription, newDescription, at)
+    internal IncidentDescriptionChange(Incident incident, string oldDescription, string newDescription, ChangeContext context)
+        : base(incident, oldDescription, newDescription, context)
     {
     }
 }

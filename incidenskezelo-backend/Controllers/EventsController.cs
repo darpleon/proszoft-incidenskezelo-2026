@@ -1,7 +1,9 @@
+using incidenskezelo_backend.Configuration;
 using incidenskezelo_backend.Contracts;
 using incidenskezelo_backend.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace incidenskezelo_backend.Controllers;
 
@@ -13,11 +15,16 @@ public class EventsController : ControllerBase
 
     private readonly EventService _eventService;
     private readonly EventIngestService _ingestService;
+    private readonly EventIngestOptions _ingestOptions;
 
-    public EventsController(EventService eventService, EventIngestService ingestService)
+    public EventsController(
+        EventService eventService,
+        EventIngestService ingestService,
+        IOptions<EventIngestOptions> ingestOptions)
     {
         _eventService = eventService;
         _ingestService = ingestService;
+        _ingestOptions = ingestOptions.Value;
     }
 
 
@@ -25,6 +32,11 @@ public class EventsController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> Create(CancellationToken cancellationToken)
     {
+        if (!_ingestOptions.DirectHttpEnabled)
+        {
+            return NotFound();
+        }
+
         using var body = new MemoryStream();
         await Request.Body.CopyToAsync(body, cancellationToken);
 

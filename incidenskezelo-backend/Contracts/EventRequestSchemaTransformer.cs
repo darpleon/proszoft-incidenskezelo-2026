@@ -1,4 +1,7 @@
+using incidenskezelo_backend.Configuration;
 using Microsoft.AspNetCore.OpenApi;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.OpenApi;
 
 namespace incidenskezelo_backend.Contracts;
@@ -10,6 +13,14 @@ public class EventRequestSchemaTransformer : IOpenApiOperationTransformer
         OpenApiOperationTransformerContext context,
         CancellationToken cancellationToken)
     {
+        var options = context.ApplicationServices
+            .GetRequiredService<IOptions<EventIngestOptions>>().Value;
+
+        if (!options.DirectHttpEnabled)
+        {
+            return;
+        }
+
         if (context.Description.HttpMethod == "POST"
             && string.Equals(
                 context.Description.RelativePath,

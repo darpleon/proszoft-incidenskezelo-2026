@@ -17,6 +17,7 @@ public sealed class IncidentAnalysisService(
     private const string GetIncidentDetailsName = "getIncidentDetails";
     private const string GetRelatedEventsName = "getRelatedEvents";
     private const string GetIncidentHistoryName = "getIncidentHistory";
+    private const string GetRecentServiceEventsName = "getRecentServiceEvents";
 
     private static readonly JsonSerializerOptions ToolResultJsonOptions =
     new(JsonSerializerDefaults.Web)
@@ -57,7 +58,30 @@ public sealed class IncidentAnalysisService(
               "properties": {},
               "additionalProperties": false
             }
-        """)
+            """),
+
+        new AiToolDefinition(
+            GetRecentServiceEventsName,
+            "Retrieves the most recent events for the specified service, whether or not they are linked to the incident being analyzed.",
+            """
+            {
+              "type": "object",
+              "properties": {
+                "serviceCode": {
+                  "type": "string",
+                  "description": "The service code, such as orders-api or postgres-main."
+                },
+                "limit": {
+                  "type": "integer",
+                  "description": "Maximum number of recent events to return, from 1 to 20.",
+                  "minimum": 1,
+                  "maximum": 20
+                }
+              },
+              "required": ["serviceCode", "limit"],
+              "additionalProperties": false
+            }
+            """)
     ];
 
     public async Task<IncidentAnalysisResult> AnalyzeAsync(
@@ -220,6 +244,57 @@ public sealed class IncidentAnalysisService(
                             {
                                 found = history is not null,
                                 history = history ?? []
+                            },
+                            ToolResultJsonOptions);
+                    }
+                    else if (toolCall.Name == GetRecentServiceEventsName)
+                    {
+                        var arguments = toolCall.Arguments;
+
+                        if (!arguments.TryGetProperty("serviceCode", out var serviceCodeElement) ||
+                            serviceCodeElement.ValueKind != JsonValueKind.String)
+                        {
+                            throw new ArgumentException(
+                                "The serviceCode argument is required.");
+                        }
+
+                        var serviceCode = serviceCodeElement.GetString()?.Trim();
+
+                        if (string.IsNullOrWhiteSpace(serviceCode))
+                        {
+                            throw new ArgumentException(
+                                "The serviceCode argument cannot be empty.");
+                        }
+
+                        if (serviceCode.Length > 50)
+                        {
+                            throw new ArgumentException(
+                                "The serviceCode argument cannot exceed 50 characters.");
+                        }
+
+                        if (!arguments.TryGetProperty("limit", out var limitElement) ||
+                            !limitElement.TryGetInt32(out var limit) ||
+                            limit is < 1 or > 20)
+                        {
+                            throw new ArgumentException(
+                                "The limit argument must be an integer between 1 and 20.");
+                        }
+
+                        var events = await eventService.GetRecentByServiceCodeAsync(
+                            serviceCode,
+                            limit,
+                            cancellationToken);
+
+                        foreach (var incidentEvent in events)
+                        {
+                            relevantEventIds.Add(incidentEvent.EventId);
+                        }
+
+                        result = JsonSerializer.SerializeToElement(
+                            new
+                            {
+                                serviceCode,
+                                events
                             },
                             ToolResultJsonOptions);
                     }

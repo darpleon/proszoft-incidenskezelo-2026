@@ -8,4 +8,8 @@ public interface IIncidentAnalysisService
         Guid incidentId,
         AiProvider provider,
         CancellationToken cancellationToken = default);
+
+    Task<StoredIncidentAnalysis?> GetLatestAsync(
+        Guid incidentId,
+        CancellationToken cancellationToken);
 }

@@ -1,17 +1,21 @@
-using System.Text.Json;
 using incidenskezelo_backend.Configuration;
+using incidenskezelo_backend.Contracts;
+using incidenskezelo_backend.Data;
 using incidenskezelo_backend.Models.AI;
 using incidenskezelo_backend.Services;
-using incidenskezelo_backend.Contracts;
-using System.Text.Json.Serialization;
+using Microsoft.EntityFrameworkCore;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace incidenskezelo_backend.Services.AI;
 
 public sealed class IncidentAnalysisService(
     AiServiceResolver aiServiceResolver,
     IIncidentService incidentService,
-    EventService eventService) : IIncidentAnalysisService
+    EventService eventService,
+    AppDbContext dbContext,
+    TimeProvider timeProvider) : IIncidentAnalysisService
 {
     private const int MaxToolRounds = 5;
     private const int MaxToolCalls = 5;
@@ -198,7 +202,7 @@ public sealed class IncidentAnalysisService(
                     _ => throw new ArgumentOutOfRangeException(nameof(provider))
                 };
 
-                return new IncidentAnalysisResult(
+                var result = new IncidentAnalysisResult(
                     Model: model,
                     Summary: payload.Summary,
                     ProbableCauses: probableCauses
@@ -210,6 +214,10 @@ public sealed class IncidentAnalysisService(
                     RelevantEventIds: verifiedEventIds,
                     Limitations: payload.Limitations ?? [],
                     ToolCalls: toolCallStatuses);
+
+                await SaveLatestAsync(incidentId, result, cancellationToken);
+
+                return result;
             }
 
             if (response.ProviderState is null)
@@ -453,4 +461,69 @@ public sealed class IncidentAnalysisService(
     private sealed record AiProbableCausePayload(
         string? Description,
         string? Confidence);
+
+    private async Task SaveLatestAsync(
+    Guid publicIncidentId,
+    IncidentAnalysisResult result,
+    CancellationToken cancellationToken)
+    {
+        var internalIncidentId = await dbContext.Incidents
+            .Where(incident => incident.PublicId == publicIncidentId)
+            .Select(incident => (int?)incident.IncidentId)
+            .SingleOrDefaultAsync(cancellationToken);
+
+        // Ha az incidens nem létezik, ne próbáljunk idegen kulcsot menteni.
+        // A jelenlegi elemzési válasz továbbra is visszaadható.
+        if (internalIncidentId is null)
+        {
+            return;
+        }
+
+        var stored = await dbContext.StoredIncidentAnalyses
+            .SingleOrDefaultAsync(
+                analysis => analysis.IncidentId == internalIncidentId.Value,
+                cancellationToken);
+
+        var resultJson = JsonSerializer.Serialize(
+            result,
+            new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        if (stored is null)
+        {
+            dbContext.StoredIncidentAnalyses.Add(new StoredIncidentAnalysis
+            {
+                IncidentId = internalIncidentId.Value,
+                ResultJson = resultJson,
+                AnalyzedAtUtc = timeProvider.GetUtcNow().UtcDateTime
+            });
+        }
+        else
+        {
+            stored.ResultJson = resultJson;
+            stored.AnalyzedAtUtc = timeProvider.GetUtcNow().UtcDateTime;
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<StoredIncidentAnalysis?> GetLatestAsync(
+    Guid publicIncidentId,
+    CancellationToken cancellationToken)
+    {
+        var internalIncidentId = await dbContext.Incidents
+            .Where(incident => incident.PublicId == publicIncidentId)
+            .Select(incident => (int?)incident.IncidentId)
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (internalIncidentId is null)
+        {
+            return null;
+        }
+
+        return await dbContext.StoredIncidentAnalyses
+            .AsNoTracking()
+            .SingleOrDefaultAsync(
+                analysis => analysis.IncidentId == internalIncidentId.Value,
+                cancellationToken);
+    }
 }

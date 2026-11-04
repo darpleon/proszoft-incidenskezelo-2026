@@ -2,6 +2,7 @@
 using incidenskezelo_backend.Models.AI;
 using incidenskezelo_backend.Services.AI;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace incidenskezelo_backend.Controllers;
 
@@ -69,5 +70,51 @@ public class AiController : ControllerBase
                 title: "AI response could not be used",
                 detail: "The AI model returned an invalid response. Please try again.");
         }
+    }
+
+    [HttpGet("analyze/{incidentId}")]
+    public async Task<IActionResult> GetLatest(
+    Guid incidentId,
+    CancellationToken cancellationToken)
+    {
+        if (incidentId == Guid.Empty)
+        {
+            return BadRequest("The incident ID is required.");
+        }
+
+        var stored = await _incidentAnalysisService.GetLatestAsync(
+            incidentId,
+            cancellationToken);
+
+        if (stored is null)
+        {
+            return NotFound();
+        }
+
+        var result = JsonSerializer.Deserialize<IncidentAnalysisResult>(
+            stored.ResultJson,
+            new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        if (result is null)
+        {
+            // Ez sérült adatbázisban tárolt eredmény, nem provider-hiba.
+            return Problem(
+                statusCode: StatusCodes.Status500InternalServerError,
+                title: "Stored analysis could not be read",
+                detail: "The saved analysis could not be loaded.");
+        }
+
+        return Ok(new
+        {
+            incidentId,
+            model = result.Model,
+            analyzedAtUtc = stored.AnalyzedAtUtc,
+            summary = result.Summary,
+            probableCauses = result.ProbableCauses,
+            suggestedActions = result.SuggestedActions,
+            relevantEventIds = result.RelevantEventIds,
+            limitations = result.Limitations,
+            toolCalls = result.ToolCalls
+        });
     }
 }

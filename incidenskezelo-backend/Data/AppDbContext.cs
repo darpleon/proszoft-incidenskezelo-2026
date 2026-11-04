@@ -1,4 +1,5 @@
 using incidenskezelo_backend.Models;
+using incidenskezelo_backend.Models.AI;
 using incidenskezelo_backend.Models.Incident;
 using incidenskezelo_backend.Models.Incident.Changes;
 using Microsoft.EntityFrameworkCore;
@@ -28,6 +29,8 @@ namespace incidenskezelo_backend.Data
         public DbSet<IncidentPriorityChange> IncidentPriorityChanges => Set<IncidentPriorityChange>();
 
         public DbSet<IncidentAssigneeChange> IncidentAssigneeChanges => Set<IncidentAssigneeChange>();
+        public DbSet<StoredIncidentAnalysis> StoredIncidentAnalyses =>
+            Set<StoredIncidentAnalysis>();
 
         protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
         {
@@ -86,6 +89,28 @@ namespace incidenskezelo_backend.Data
                 entity.Property(user => user.Role).HasConversion<string>().HasMaxLength(20);
                 entity.Property(user => user.CreatedAtUtc).HasPrecision(3);
                 entity.HasIndex(user => user.Email).IsUnique();
+            });
+
+            modelBuilder.Entity<StoredIncidentAnalysis>(entity =>
+            {
+                entity.ToTable("IncidentAnalysis", table =>
+                    table.HasCheckConstraint(
+                        "CK_IncidentAnalysis_ResultJson",
+                        "ISJSON([ResultJson]) = 1"));
+
+                entity.HasKey(analysis => analysis.IncidentId);
+
+                entity.Property(analysis => analysis.ResultJson)
+                    .HasColumnType("nvarchar(max)");
+
+                entity.Property(analysis => analysis.AnalyzedAtUtc)
+                    .HasPrecision(3);
+
+                entity.HasOne<Incident>()
+                    .WithOne()
+                    .HasForeignKey<StoredIncidentAnalysis>(
+                        analysis => analysis.IncidentId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             var incident = modelBuilder.Entity<Incident>();

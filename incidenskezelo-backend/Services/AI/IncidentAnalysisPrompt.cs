@@ -25,7 +25,7 @@ public static class IncidentAnalysisPrompt
         - After a tool returns a result, use that result; do not call the tool again to confirm it.
         - Do not retry a failed tool call. State the unavailable information in limitations instead.
         - When multiple independent tools are needed, request them in the same turn.
-
+        - Make no more than 5 tool calls in total during one analysis.
 
         Do not claim that you used a tool unless the backend returned its result.
 

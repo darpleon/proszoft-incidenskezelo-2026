@@ -14,6 +14,7 @@ public sealed class IncidentAnalysisService(
     EventService eventService) : IIncidentAnalysisService
 {
     private const int MaxToolRounds = 5;
+    private const int MaxToolCalls = 5;
     private const string GetIncidentDetailsName = "getIncidentDetails";
     private const string GetRelatedEventsName = "getRelatedEvents";
     private const string GetIncidentHistoryName = "getIncidentHistory";
@@ -114,6 +115,7 @@ public sealed class IncidentAnalysisService(
         AiProvider provider,
         CancellationToken cancellationToken = default)
     {
+        var executedToolCallCount = 0;
         var toolCallStatuses = new List<AiToolCallStatus>();
         var relevantEventIds = new HashSet<long>();
         var aiService = aiServiceResolver.Resolve(provider);
@@ -218,6 +220,27 @@ public sealed class IncidentAnalysisService(
             var results = new List<AiToolResult>();
             foreach (var toolCall in response.ToolCalls)
             {
+                if (executedToolCallCount >= MaxToolCalls)
+                {
+                    results.Add(new AiToolResult(
+                        toolCall.Id,
+                        toolCall.Name,
+                        JsonSerializer.SerializeToElement(
+                            new
+                            {
+                                succeeded = false,
+                                error = "Maximum tool call limit reached."
+                            },
+                            ToolResultJsonOptions)));
+
+                    toolCallStatuses.Add(new AiToolCallStatus(
+                        toolCall.Name,
+                        Succeeded: false));
+
+                    continue;
+                }
+
+                executedToolCallCount++;
                 try
                 {
                     JsonElement result;

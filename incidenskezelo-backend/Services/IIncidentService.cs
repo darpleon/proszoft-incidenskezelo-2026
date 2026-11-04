@@ -14,4 +14,5 @@ public interface IIncidentService
     Task<IncidentResponse?> UpdatePriorityAsync(Guid id, IncidentPriority priority, int expectedRevision, int actorUserId, CancellationToken ct);
     Task<IncidentResponse?> UpdateAssigneeAsync(Guid id, int? assigneeUserId, int expectedRevision, int actorUserId, CancellationToken ct);
     Task<List<IncidentChangeResponse>?> GetHistoryAsync(Guid id, CancellationToken ct);
+    Task<List<PreviousIncidentSearchResult>> SearchPreviousAsync(Guid excludeIncidentId, string query, int limit, CancellationToken ct);
 }

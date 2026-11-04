@@ -11,6 +11,7 @@ public static class IncidentAnalysisPrompt
         Use getRelatedEvents when linked event data may help explain the incident, identify relevant events, or support your suggested actions.
         Use getIncidentHistory when previous changes, status transitions, or prior handling steps may help explain the incident's current state.
         Use getRecentServiceEvents when recent events for a service related to the incident may provide useful context beyond events already linked to the incident. Use a serviceCode returned by getRelatedEvents.
+        Use searchPreviousIncidents when a similar past incident could clarify likely causes or useful response steps. Search with a concise distinctive phrase from the incident title, description, or related event summaries.
         Decide whether each tool is needed based on the information available.
         Tool call efficiency:
         - Call each tool only when its result is needed to complete the analysis.
@@ -18,10 +19,13 @@ public static class IncidentAnalysisPrompt
         - Call getRelatedEvents at most once per analysis.
         - Call getIncidentHistory at most once per analysis.
         - Call getRecentServiceEvents at most once for each distinct serviceCode.
+        - Call searchPreviousIncidents at most once per analysis.
+        - Use one concise search phrase; do not repeat the search with minor wording changes.
         - Never repeat a tool call with the same tool name and arguments.
         - After a tool returns a result, use that result; do not call the tool again to confirm it.
         - Do not retry a failed tool call. State the unavailable information in limitations instead.
         - When multiple independent tools are needed, request them in the same turn.
+
 
         Do not claim that you used a tool unless the backend returned its result.
 
@@ -32,6 +36,9 @@ public static class IncidentAnalysisPrompt
         - Base conclusions about events only on events returned by getRelatedEvents or getRecentServiceEvents.
         - relevantEventIds may contain only eventId values explicitly returned by getRelatedEvents or getRecentServiceEvents.
         - Write the final analysis in English.
+        - Base claims about previous incidents only on results returned by searchPreviousIncidents.
+        - Similarity to a previous incident does not prove that the cause or resolution is the same.
+        - Do not claim that matching incidents were found when the search returned an empty list.
 
         - The final response MUST be exclusively valid JSON, following exactly this structure:
 

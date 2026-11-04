@@ -18,6 +18,9 @@ public sealed class IncidentAnalysisService(
     private const string GetRelatedEventsName = "getRelatedEvents";
     private const string GetIncidentHistoryName = "getIncidentHistory";
     private const string GetRecentServiceEventsName = "getRecentServiceEvents";
+    private const string SearchPreviousIncidentsName = "searchPreviousIncidents";
+    private const int MaxPreviousIncidentSearchLimit = 5;
+    private const int MaxPreviousIncidentQueryLength = 200;
 
     private static readonly JsonSerializerOptions ToolResultJsonOptions =
     new(JsonSerializerDefaults.Web)
@@ -79,6 +82,28 @@ public sealed class IncidentAnalysisService(
                 }
               },
               "required": ["serviceCode", "limit"],
+              "additionalProperties": false
+            }
+            """),
+        new AiToolDefinition(
+            SearchPreviousIncidentsName,
+            "Searches other incidents by phrase in their title or description. The incident currently being analyzed is excluded.",
+            """
+            {
+              "type": "object",
+              "properties": {
+                "query": {
+                  "type": "string",
+                  "description": "A concise distinctive phrase from the incident title, description, or related event summaries."
+                },
+                "limit": {
+                  "type": "integer",
+                  "description": "Maximum number of matching incidents to return, from 1 to 5.",
+                  "minimum": 1,
+                  "maximum": 5
+                }
+              },
+              "required": ["query", "limit"],
               "additionalProperties": false
             }
             """)
@@ -295,6 +320,53 @@ public sealed class IncidentAnalysisService(
                             {
                                 serviceCode,
                                 events
+                            },
+                            ToolResultJsonOptions);
+                    }
+                    else if (toolCall.Name == SearchPreviousIncidentsName)
+                    {
+                        var arguments = toolCall.Arguments;
+
+                        if (!arguments.TryGetProperty("query", out var queryElement) ||
+                            queryElement.ValueKind != JsonValueKind.String)
+                        {
+                            throw new ArgumentException(
+                                "The query argument is required.");
+                        }
+
+                        var query = queryElement.GetString()?.Trim();
+
+                        if (string.IsNullOrWhiteSpace(query))
+                        {
+                            throw new ArgumentException(
+                                "The query argument cannot be empty.");
+                        }
+
+                        if (query.Length > MaxPreviousIncidentQueryLength)
+                        {
+                            throw new ArgumentException(
+                                $"The query cannot exceed {MaxPreviousIncidentQueryLength} characters.");
+                        }
+
+                        if (!arguments.TryGetProperty("limit", out var limitElement) ||
+                            !limitElement.TryGetInt32(out var limit) ||
+                            limit is < 1 or > MaxPreviousIncidentSearchLimit)
+                        {
+                            throw new ArgumentException(
+                                $"The limit must be an integer between 1 and {MaxPreviousIncidentSearchLimit}.");
+                        }
+
+                        var incidents = await incidentService.SearchPreviousAsync(
+                            incidentId,
+                            query,
+                            limit,
+                            cancellationToken);
+
+                        result = JsonSerializer.SerializeToElement(
+                            new
+                            {
+                                query,
+                                incidents
                             },
                             ToolResultJsonOptions);
                     }

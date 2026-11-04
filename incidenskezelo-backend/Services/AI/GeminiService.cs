@@ -21,6 +21,14 @@ public sealed class GeminiService(
         AiTurnRequest request,
         CancellationToken cancellationToken = default)
     {
+
+        if (string.IsNullOrWhiteSpace(_options.ApiKey) ||
+            string.IsNullOrWhiteSpace(_options.Model))
+        {
+            throw new AiProviderUnavailableException(
+                "Gemini is not configured.");
+        }
+
         var body = new JsonObject
         {
             ["model"] = _options.Model
@@ -94,78 +102,145 @@ public sealed class GeminiService(
             Encoding.UTF8,
             "application/json");
 
-        using var response = await httpClient.SendAsync(
-            httpRequest,
-            cancellationToken);
+        try
 
-        var responseBody = await response.Content.ReadAsStringAsync(
-            cancellationToken);
-
-        if (!response.IsSuccessStatusCode)
         {
-            throw new HttpRequestException(
-                $"Gemini API error ({(int)response.StatusCode}): {responseBody}");
-        }
+            using var response = await httpClient.SendAsync(
+                httpRequest,
+                cancellationToken);
 
-        using var json = JsonDocument.Parse(responseBody);
-        var root = json.RootElement;
+            var responseBody = await response.Content.ReadAsStringAsync(
+                cancellationToken);
 
-        if (!root.TryGetProperty("id", out var responseIdElement) ||
-            string.IsNullOrWhiteSpace(responseIdElement.GetString()))
-        {
-            throw new InvalidOperationException(
-                "The interaction ID is missing from the Gemini response.");
-        }
-
-        var toolCalls = new List<AiToolCall>();
-        var output = new StringBuilder();
-
-        if (root.TryGetProperty("steps", out var steps))
-        {
-            foreach (var step in steps.EnumerateArray())
+            if (!response.IsSuccessStatusCode)
             {
-                if (!step.TryGetProperty("type", out var typeElement))
+                throw new HttpRequestException(
+                    $"Gemini API error ({(int)response.StatusCode}): {responseBody}");
+            }
+
+            using var json = JsonDocument.Parse(responseBody);
+            var root = json.RootElement;
+
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                throw new AiInvalidResponseException(
+                    "Gemini response must be a JSON object.");
+            }
+
+            if (!root.TryGetProperty("id", out var responseIdElement) ||
+                responseIdElement.ValueKind != JsonValueKind.String ||
+                string.IsNullOrWhiteSpace(responseIdElement.GetString()))
+            {
+                throw new AiInvalidResponseException(
+                    "The interaction ID is missing or invalid.");
+            }
+
+            var toolCalls = new List<AiToolCall>();
+            var output = new StringBuilder();
+
+            if (root.TryGetProperty("steps", out var steps))
+            {
+
+                if (steps.ValueKind != JsonValueKind.Array)
                 {
-                    continue;
+                    throw new AiInvalidResponseException(
+                        "Gemini response steps must be an array.");
                 }
 
-                var type = typeElement.GetString();
-                if (type == "function_call" &&
-                    step.TryGetProperty("id", out var callIdElement) &&
-                    step.TryGetProperty("name", out var nameElement) &&
-                    step.TryGetProperty("arguments", out var argumentsElement))
+                foreach (var step in steps.EnumerateArray())
                 {
-                    toolCalls.Add(new AiToolCall(
-                        callIdElement.GetString() ?? string.Empty,
-                        nameElement.GetString() ?? string.Empty,
-                        argumentsElement.Clone()));
-                }
-                else if (type == "model_output" &&
-                         step.TryGetProperty("content", out var content))
-                {
-                    foreach (var item in content.EnumerateArray())
+                    if (step.ValueKind != JsonValueKind.Object ||
+                        !step.TryGetProperty("type", out var typeElement) ||
+                        typeElement.ValueKind != JsonValueKind.String)
                     {
-                        if (item.TryGetProperty("type", out var itemType) &&
-                            itemType.GetString() == "text" &&
-                            item.TryGetProperty("text", out var textElement))
+                        throw new AiInvalidResponseException(
+                            "Gemini returned an invalid response step.");
+                    }
+
+                    var type = typeElement.GetString();
+
+                    if (type == "function_call")
+                    {
+                        if (!step.TryGetProperty("id", out var callIdElement) ||
+                            callIdElement.ValueKind != JsonValueKind.String ||
+                            !step.TryGetProperty("name", out var nameElement) ||
+                            nameElement.ValueKind != JsonValueKind.String ||
+                            !step.TryGetProperty("arguments", out var argumentsElement) ||
+                            argumentsElement.ValueKind != JsonValueKind.Object)
                         {
-                            output.AppendLine(textElement.GetString());
+                            throw new AiInvalidResponseException(
+                                "Gemini returned an invalid function call.");
+                        }
+
+                        toolCalls.Add(new AiToolCall(
+                            callIdElement.GetString()!,
+                            nameElement.GetString()!,
+                            argumentsElement.Clone()));
+                    }
+                    else if (type == "model_output")
+                    {
+                        if (!step.TryGetProperty("content", out var content) ||
+                            content.ValueKind != JsonValueKind.Array)
+                        {
+                            throw new AiInvalidResponseException(
+                                "Gemini returned invalid model output content.");
+                        }
+
+                        foreach (var item in content.EnumerateArray())
+                        {
+                            if (item.ValueKind != JsonValueKind.Object ||
+                                !item.TryGetProperty("type", out var itemType) ||
+                                itemType.ValueKind != JsonValueKind.String)
+                            {
+                                throw new AiInvalidResponseException(
+                                    "Gemini returned an invalid content item.");
+                            }
+
+                            if (itemType.GetString() == "text")
+                            {
+                                if (!item.TryGetProperty("text", out var textElement) ||
+                                    textElement.ValueKind != JsonValueKind.String)
+                                {
+                                    throw new AiInvalidResponseException(
+                                        "Gemini returned an invalid text item.");
+                                }
+
+                                output.AppendLine(textElement.GetString());
+                            }
                         }
                     }
                 }
             }
+
+
+            var state = JsonSerializer.SerializeToElement(new
+            {
+                interactionId = responseIdElement.GetString()
+            });
+
+            return new AiTurnResponse(
+                string.IsNullOrWhiteSpace(output.ToString())
+                    ? null
+                    : output.ToString().Trim(),
+                toolCalls,
+                state);
         }
-
-        var state = JsonSerializer.SerializeToElement(new
+        catch (OperationCanceledException exception)
+            when (!cancellationToken.IsCancellationRequested)
         {
-            interactionId = responseIdElement.GetString()
-        });
-
-        return new AiTurnResponse(
-            string.IsNullOrWhiteSpace(output.ToString())
-                ? null
-                : output.ToString().Trim(),
-            toolCalls,
-            state);
+            throw new AiProviderTimeoutException(exception);
+        }
+        catch (HttpRequestException exception)
+        {
+            throw new AiProviderUnavailableException(
+                "Gemini could not be reached.",
+                exception);
+        }
+        catch (JsonException exception)
+        {
+            throw new AiInvalidResponseException(
+                "Gemini returned invalid response data.",
+                exception);
+        }
     }
 }

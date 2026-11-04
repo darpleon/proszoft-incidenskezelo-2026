@@ -54,81 +54,167 @@ public sealed class LocalAiService(
             ["stream"] = false
         };
 
-        var url = $"{_options.BaseUrl.TrimEnd('/')}/api/chat";
-        using var response = await httpClient.PostAsJsonAsync(
-            url,
-            body,
-            cancellationToken);
 
-        var responseBody = await response.Content.ReadAsStringAsync(
-            cancellationToken);
-
-        if (!response.IsSuccessStatusCode)
+        if (string.IsNullOrWhiteSpace(_options.BaseUrl) ||
+            string.IsNullOrWhiteSpace(_options.Model) ||
+            !Uri.TryCreate(_options.BaseUrl, UriKind.Absolute, out _))
         {
-            throw new HttpRequestException(
-                $"Ollama API error ({(int)response.StatusCode}): {responseBody}");
+            throw new AiProviderUnavailableException(
+                "The local AI provider is not configured.");
         }
 
-        using var json = JsonDocument.Parse(responseBody);
-        var root = json.RootElement;
-
-        if (!root.TryGetProperty("message", out var message))
+        try
         {
-            throw new InvalidOperationException(
-                "Az Ollama válaszából hiányzik a message mező.");
-        }
+            var url = $"{_options.BaseUrl.TrimEnd('/')}/api/chat";
+            using var response = await httpClient.PostAsJsonAsync(
+                url,
+                body,
+                cancellationToken);
 
-        var assistantMessage = JsonNode.Parse(message.GetRawText())
-            ?? throw new InvalidOperationException(
-                "Az Ollama üres message objektumot adott vissza.");
-        messages.Add(assistantMessage);
+            var responseBody = await response.Content.ReadAsStringAsync(
+                cancellationToken);
 
-        var toolCalls = new List<AiToolCall>();
-        if (message.TryGetProperty("tool_calls", out var calls))
-        {
-            foreach (var call in calls.EnumerateArray())
+            if (!response.IsSuccessStatusCode)
             {
-                if (!call.TryGetProperty("function", out var function) ||
-                    !function.TryGetProperty("name", out var nameElement))
+                throw new HttpRequestException(
+                    $"Ollama API error ({(int)response.StatusCode}): {responseBody}");
+            }
+
+            using var json = JsonDocument.Parse(responseBody);
+            var root = json.RootElement;
+
+            if (root.ValueKind != JsonValueKind.Object)
+            {
+                throw new AiInvalidResponseException(
+                    "Ollama response must be a JSON object.");
+            }
+
+            if (!root.TryGetProperty("message", out var message) ||
+                message.ValueKind != JsonValueKind.Object)
+            {
+                throw new AiInvalidResponseException(
+                    "Ollama response is missing a valid message object.");
+            }
+
+            var assistantMessage = JsonNode.Parse(message.GetRawText())
+                ?? throw new AiInvalidResponseException(
+                    "Ollama returned an empty message object.");
+
+            var toolCalls = new List<AiToolCall>();
+            if (message.TryGetProperty("tool_calls", out var calls))
+            {
+
+                if (calls.ValueKind != JsonValueKind.Array)
                 {
-                    continue;
+                    throw new AiInvalidResponseException(
+                        "Ollama tool_calls must be an array.");
                 }
 
-                var arguments = function.TryGetProperty("arguments", out var argumentsElement)
-                    ? argumentsElement.Clone()
-                    : JsonSerializer.SerializeToElement(new { });
+                foreach (var call in calls.EnumerateArray())
+                {
+                    if (call.ValueKind != JsonValueKind.Object ||
+                        !call.TryGetProperty("function", out var function) ||
+                        function.ValueKind != JsonValueKind.Object ||
+                        !function.TryGetProperty("name", out var nameElement) ||
+                        nameElement.ValueKind != JsonValueKind.String ||
+                        string.IsNullOrWhiteSpace(nameElement.GetString()))
+                    {
+                        throw new AiInvalidResponseException(
+                            "Ollama returned an invalid tool call.");
+                    }
 
-                toolCalls.Add(new AiToolCall(
-                    Guid.NewGuid().ToString("N"),
-                    nameElement.GetString() ?? string.Empty,
-                    arguments));
+                    var arguments = function.TryGetProperty(
+                        "arguments",
+                        out var argumentsElement)
+                            ? argumentsElement.Clone()
+                            : JsonSerializer.SerializeToElement(new { });
+
+                    if (arguments.ValueKind != JsonValueKind.Object)
+                    {
+                        throw new AiInvalidResponseException(
+                            "Ollama tool call arguments must be an object.");
+                    }
+
+                    toolCalls.Add(new AiToolCall(
+                        Guid.NewGuid().ToString("N"),
+                        nameElement.GetString() ?? string.Empty,
+                        arguments));
+                }
             }
+
+            string? text = null;
+
+            if (message.TryGetProperty("content", out var contentElement))
+            {
+                if (contentElement.ValueKind == JsonValueKind.String)
+                {
+                    text = contentElement.GetString();
+                }
+                else if (contentElement.ValueKind != JsonValueKind.Null)
+                {
+                    throw new AiInvalidResponseException(
+                        "Ollama message content must be a string or null.");
+                }
+            }
+
+            var state = JsonSerializer.SerializeToElement(new
+            {
+                messages
+            });
+
+            return new AiTurnResponse(
+                string.IsNullOrWhiteSpace(text) ? null : text.Trim(),
+                toolCalls,
+                state);
+
         }
-
-        var text = message.TryGetProperty("content", out var contentElement)
-            ? contentElement.GetString()
-            : null;
-
-        var state = JsonSerializer.SerializeToElement(new
+        catch (OperationCanceledException exception)
+            when (!cancellationToken.IsCancellationRequested)
         {
-            messages
-        });
-
-        return new AiTurnResponse(
-            string.IsNullOrWhiteSpace(text) ? null : text.Trim(),
-            toolCalls,
-            state);
+            throw new AiProviderTimeoutException(exception);
+        }
+        catch (HttpRequestException exception)
+        {
+            throw new AiProviderUnavailableException(
+                "The local AI provider could not be reached.",
+                exception);
+        }
+        catch (JsonException exception)
+        {
+            throw new AiInvalidResponseException(
+                "Ollama returned invalid response data.",
+                exception);
+        }
     }
 
     private static JsonArray GetMessages(AiTurnRequest request)
     {
         if (request.ProviderState is { } state)
         {
-            if (!state.TryGetProperty("messages", out var messagesElement) ||
-                JsonNode.Parse(messagesElement.GetRawText()) is not JsonArray messages)
+            if (state.ValueKind != JsonValueKind.Object ||
+                !state.TryGetProperty("messages", out var messagesElement))
             {
-                throw new InvalidOperationException(
-                    "Az Ollama folytatásához hiányzik a messages előzmény.");
+                throw new AiInvalidResponseException(
+                    "Ollama continuation state is missing messages.");
+            }
+
+            JsonArray? messages;
+
+            try
+            {
+                messages = JsonNode.Parse(messagesElement.GetRawText()) as JsonArray;
+            }
+            catch (JsonException exception)
+            {
+                throw new AiInvalidResponseException(
+                    "Ollama continuation state contains invalid JSON.",
+                    exception);
+            }
+
+            if (messages is null)
+            {
+                throw new AiInvalidResponseException(
+                    "Ollama continuation messages must be an array.");
             }
 
             return messages;

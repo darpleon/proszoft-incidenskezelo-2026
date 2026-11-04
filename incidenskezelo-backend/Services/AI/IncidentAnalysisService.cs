@@ -143,7 +143,7 @@ public sealed class IncidentAnalysisService(
             {
                 if (string.IsNullOrWhiteSpace(response.Text))
                 {
-                    throw new InvalidOperationException(
+                    throw new AiInvalidResponseException(
                         "The AI did not return a text analysis.");
                 }
 
@@ -157,14 +157,14 @@ public sealed class IncidentAnalysisService(
                 }
                 catch (JsonException exception)
                 {
-                    throw new InvalidOperationException(
+                    throw new AiInvalidResponseException(
                         "The AI returned invalid analysis JSON.",
                         exception);
                 }
 
                 if (payload is null || string.IsNullOrWhiteSpace(payload.Summary))
                 {
-                    throw new InvalidOperationException(
+                    throw new AiInvalidResponseException(
                         "The AI returned invalid analysis JSON: summary is required.");
                 }
 
@@ -172,15 +172,16 @@ public sealed class IncidentAnalysisService(
 
                 foreach (var cause in probableCauses)
                 {
-                    if (string.IsNullOrWhiteSpace(cause.Description))
+                    if (cause is null ||
+                        string.IsNullOrWhiteSpace(cause.Description))
                     {
-                        throw new InvalidOperationException(
+                        throw new AiInvalidResponseException(
                             "The AI returned invalid analysis JSON: cause description is required.");
                     }
 
                     if (cause.Confidence is not ("High" or "Medium" or "Low"))
                     {
-                        throw new InvalidOperationException(
+                        throw new AiInvalidResponseException(
                             "The AI returned invalid analysis JSON: confidence must be High, Medium, or Low.");
                     }
                 }
@@ -213,7 +214,7 @@ public sealed class IncidentAnalysisService(
 
             if (response.ProviderState is null)
             {
-                throw new InvalidOperationException(
+                throw new AiInvalidResponseException(
                     "The AI tool call response is missing the continuation state.");
             }
 
@@ -438,13 +439,13 @@ public sealed class IncidentAnalysisService(
                 results);
         }
 
-        throw new InvalidOperationException(
+        throw new AiInvalidResponseException(
             $"The AI exceeded the maximum of {MaxToolRounds} tool-call rounds.");
     }
 
     private sealed record AiAnalysisPayload(
     string? Summary,
-    List<AiProbableCausePayload>? ProbableCauses,
+    List<AiProbableCausePayload?>? ProbableCauses,
     List<string>? SuggestedActions,
     List<long>? RelevantEventIds,
     List<string>? Limitations);

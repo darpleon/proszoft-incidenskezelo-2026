@@ -16,6 +16,7 @@ public sealed class IncidentAnalysisService(
     private const int MaxToolRounds = 5;
     private const string GetIncidentDetailsName = "getIncidentDetails";
     private const string GetRelatedEventsName = "getRelatedEvents";
+    private const string GetIncidentHistoryName = "getIncidentHistory";
 
     private static readonly JsonSerializerOptions ToolResultJsonOptions =
     new(JsonSerializerDefaults.Web)
@@ -45,7 +46,18 @@ public sealed class IncidentAnalysisService(
               "properties": {},
               "additionalProperties": false
             }
-            """)
+            """),
+
+        new AiToolDefinition(
+            GetIncidentHistoryName,
+            "Retrieves the chronological change history of the incident being analyzed, including its creation and changes to status, title, description, priority, and assignee.",
+            """
+            {
+              "type": "object",
+              "properties": {},
+              "additionalProperties": false
+            }
+        """)
     ];
 
     public async Task<IncidentAnalysisResult> AnalyzeAsync(
@@ -194,6 +206,20 @@ public sealed class IncidentAnalysisService(
                             {
                                 incidentFound = events is not null,
                                 events = events ?? new List<EventResponse>()
+                            },
+                            ToolResultJsonOptions);
+                    }
+                    else if (toolCall.Name == GetIncidentHistoryName)
+                    {
+                        var history = await incidentService.GetHistoryAsync(
+                            incidentId,
+                            cancellationToken);
+
+                        result = JsonSerializer.SerializeToElement(
+                            new
+                            {
+                                found = history is not null,
+                                history = history ?? []
                             },
                             ToolResultJsonOptions);
                     }

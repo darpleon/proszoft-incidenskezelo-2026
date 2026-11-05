@@ -123,17 +123,75 @@ public sealed class IncidentAnalysisService(
         var toolCallStatuses = new List<AiToolCallStatus>();
         var relevantEventIds = new HashSet<long>();
         var aiService = aiServiceResolver.Resolve(provider);
+
+        // A backend kötelezően lekéri az incidens adatait.
+        var incident = await incidentService.GetByIdAsync(
+            incidentId,
+            cancellationToken);
+
+        if (incident is null)
+        {
+            var model = provider switch
+            {
+                AiProvider.Gemini => "Gemini",
+                AiProvider.Qwen3 => "Qwen3",
+                _ => throw new ArgumentOutOfRangeException(nameof(provider))
+            };
+
+            return new IncidentAnalysisResult(
+                Model: model,
+                Summary: $"Incident {incidentId} could not be found.",
+                ProbableCauses: [],
+                SuggestedActions: [],
+                RelevantEventIds: [],
+                Limitations:
+                [
+                    "The incident could not be found, so no analysis was performed."
+                ],
+                ToolCalls:
+                [
+                    new AiToolCallStatus(
+                        GetIncidentDetailsName,
+                        Succeeded: true)
+                ]);
+        }
+
+        var incidentDetails = JsonSerializer.SerializeToElement(
+            new
+            {
+                found = true,
+                incident
+            },
+            ToolResultJsonOptions);
+
+        // A toolCalls a backend által ténylegesen elvégzett lekérést jelzi.
+        toolCallStatuses.Add(new AiToolCallStatus(
+            GetIncidentDetailsName,
+            Succeeded: true));
+
+        executedToolCallCount = 1;
+
+        var availableTools = Tools
+            .Where(tool => tool.Name != GetIncidentDetailsName)
+            .ToArray();
+
         var prompt = $"""
             {IncidentAnalysisPrompt.SystemPrompt}
 
-            Incident ID to analyze:
-            {incidentId}
+            The backend has already executed getIncidentDetails.
+            Use this result as the source of truth for the incident.
+            Do not call getIncidentDetails again.
+            You may make no more than 4 additional tool calls.
+            Do not infer or invent incident details.
+
+            getIncidentDetails result:
+            {incidentDetails.GetRawText()}
             """;
 
         var request = new AiTurnRequest(
             prompt,
             ProviderState: null,
-            Tools,
+            availableTools,
             ToolResults: []);
 
 
@@ -207,7 +265,7 @@ public sealed class IncidentAnalysisService(
                     Summary: payload.Summary,
                     ProbableCauses: probableCauses
                         .Select(cause => new ProbableCause(
-                            cause.Description!,
+                            cause!.Description!,
                             cause.Confidence!))
                         .ToList(),
                     SuggestedActions: payload.SuggestedActions ?? [],
@@ -254,21 +312,7 @@ public sealed class IncidentAnalysisService(
                 {
                     JsonElement result;
 
-                    if (toolCall.Name == GetIncidentDetailsName)
-                    {
-                        var incident = await incidentService.GetByIdAsync(
-                            incidentId,
-                            cancellationToken);
-
-                        result = JsonSerializer.SerializeToElement(
-                            new
-                            {
-                                found = incident is not null,
-                                incident
-                            },
-                            ToolResultJsonOptions);
-                    }
-                    else if (toolCall.Name == GetRelatedEventsName)
+                    if (toolCall.Name == GetRelatedEventsName)
                     {
                         var events = await eventService.GetByIncidentAsync(
                             incidentId,
@@ -443,7 +487,7 @@ public sealed class IncidentAnalysisService(
             request = new AiTurnRequest(
                 Prompt: null,
                 response.ProviderState,
-                Tools,
+                availableTools,
                 results);
         }
 

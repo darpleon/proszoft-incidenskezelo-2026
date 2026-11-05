@@ -176,6 +176,19 @@ public class EventService
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<List<EventResponse>> GetRecentByServiceCodeAsync(
+    string serviceCode,
+    int count,
+    CancellationToken cancellationToken)
+    {
+        return await ToResponses(_dbContext.Events
+            .Where(evt => evt.Service.Code == serviceCode)
+            .OrderByDescending(evt => evt.OccurredAtUtc)
+            .ThenByDescending(evt => evt.EventId)
+            .Take(count))
+            .ToListAsync(cancellationToken);
+    }
+
 
     public async Task<List<EventResponse>?> GetByIncidentAsync(Guid incidentId, CancellationToken cancellationToken)
     {

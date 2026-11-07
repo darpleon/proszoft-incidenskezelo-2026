@@ -37,7 +37,7 @@ services:
       - RABBITMQ_DEFAULT_USER=rabbitmq
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping && rabbitmqctl -q list_queues name | grep -qx incident-events"]
       interval: 5s
       timeout: 3s
       retries: 12
@@ -61,7 +61,7 @@ services:
       migrations:
         condition: service_completed_successfully
       rabbitmq:
-        condition: service_healthy
+        condition: service_started
     networks:
       - front
       - events

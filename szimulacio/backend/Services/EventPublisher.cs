@@ -39,7 +39,7 @@ public sealed class EventPublisher : IEventPublisher
             await channel.BasicPublishAsync(
                 exchange: _options.Exchange,
                 routingKey: _options.RoutingKey,
-                mandatory: false,
+                mandatory: true,
                 basicProperties: new BasicProperties
                 {
                     ContentType = "application/json",
@@ -88,7 +88,7 @@ public sealed class EventPublisher : IEventPublisher
             _channel = await _connection.CreateChannelAsync(
                 new CreateChannelOptions(
                     publisherConfirmationsEnabled: true,
-                    publisherConfirmationTrackingEnabled: false),
+                    publisherConfirmationTrackingEnabled: true),
                 cancellationToken);
 
             return _channel;

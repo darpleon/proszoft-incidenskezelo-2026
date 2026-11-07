@@ -1,0 +1,48 @@
+{
+  "id": "service-outage",
+  "name": "Service Outage (22.1)",
+  "steps": [
+    {
+      "delaySeconds": 0,
+      "correlationKey": "service-outage",
+      "serviceCode": "web-portal",
+      "eventType": "HighLatency",
+      "severity": "Warning",
+      "summary": "The web application response time has increased",
+      "payload": {
+        "responseTimeMs": 300
+      }
+    },
+    {
+      "delaySeconds": 10,
+      "correlationKey": "service-outage",
+      "serviceCode": "web-portal",
+      "eventType": "HighErrorRate",
+      "severity": "Error",
+      "summary": "The web application error rate is increasing",
+      "payload": {
+        "errorRatePercent": 16
+      }
+    },
+    {
+      "delaySeconds": 10,
+      "correlationKey": "service-outage",
+      "serviceCode": "orders-api",
+      "eventType": "ServiceDown",
+      "severity": "Critical",
+      "summary": "The backend API has become unavailable",
+      "payload": null
+    },
+    {
+      "delaySeconds": 10,
+      "correlationKey": "service-outage",
+      "serviceCode": "orders-api",
+      "eventType": "ServiceDown",
+      "severity": "Critical",
+      "summary": "The backend API is still unavailable",
+      "payload": {
+        "consecutiveFailedChecks": 3
+      }
+    }
+  ]
+}

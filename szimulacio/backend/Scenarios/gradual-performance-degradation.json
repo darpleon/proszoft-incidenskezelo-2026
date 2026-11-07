@@ -1,0 +1,65 @@
+{
+  "id": "gradual-performance-degradation",
+  "name": "Gradual Performance Degradation (22.3)",
+  "steps": [
+    {
+      "delaySeconds": 0,
+      "correlationKey": "gradual-performance-degradation",
+      "serviceCode": "orders-api",
+      "eventType": "HighLatency",
+      "severity": "Warning",
+      "summary": "The response time has exceeded the normal range",
+      "payload": {
+        "responseTimeMs": 300,
+        "baselineMaxMs": 50
+      }
+    },
+    {
+      "delaySeconds": 15,
+      "correlationKey": "gradual-performance-degradation",
+      "serviceCode": "orders-api",
+      "eventType": "HighLatency",
+      "severity": "Error",
+      "summary": "The response time has increased further",
+      "payload": {
+        "responseTimeMs": 700,
+        "baselineMaxMs": 50
+      }
+    },
+    {
+      "delaySeconds": 15,
+      "correlationKey": "gradual-performance-degradation",
+      "serviceCode": "orders-api",
+      "eventType": "HighLatency",
+      "severity": "Critical",
+      "summary": "The response time has exceeded two seconds",
+      "payload": {
+        "responseTimeMs": 2300,
+        "baselineMaxMs": 50
+      }
+    },
+    {
+      "delaySeconds": 2,
+      "correlationKey": "gradual-performance-degradation",
+      "serviceCode": "orders-api",
+      "eventType": "HighErrorRate",
+      "severity": "Error",
+      "summary": "The error rate is increasing alongside the performance degradation",
+      "payload": {
+        "errorRatePercent": 18
+      }
+    },
+    {
+      "delaySeconds": 10,
+      "correlationKey": "gradual-performance-degradation",
+      "serviceCode": "orders-api",
+      "eventType": "CapacityIssue",
+      "severity": "Critical",
+      "summary": "The backend is reporting a capacity issue",
+      "payload": {
+        "responseTimeMs": 2300,
+        "utilizationPercent": 96
+      }
+    }
+  ]
+}

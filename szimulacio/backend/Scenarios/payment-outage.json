@@ -14,7 +14,7 @@
       }
     },
     {
-      "delaySeconds": 30,
+      "delaySeconds": 10,
       "correlationKey": "payment-outage",
       "serviceCode": "payment-gw",
       "eventType": "ServiceDown",
@@ -23,7 +23,7 @@
       "payload": null
     },
     {
-      "delaySeconds": 120,
+      "delaySeconds": 10,
       "correlationKey": "payment-outage",
       "serviceCode": "payment-gw",
       "eventType": "ServiceRecovered",

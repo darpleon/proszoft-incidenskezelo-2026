@@ -1,0 +1,42 @@
+{
+  "id": "transient-failure-recovery",
+  "name": "Transient Failure and Recovery (22.4)",
+  "steps": [
+    {
+      "delaySeconds": 0,
+      "correlationKey": "transient-failure-recovery",
+      "serviceCode": "payment-gw",
+      "eventType": "CapacityIssue",
+      "severity": "Error",
+      "summary": "The external service is reporting a performance issue",
+      "payload": {
+        "utilizationPercent": 92,
+        "responseTimeMs": 1152,
+        "baselineMaxMs": 150
+      }
+    },
+    {
+      "delaySeconds": 5,
+      "correlationKey": "transient-failure-recovery",
+      "serviceCode": "batch-worker",
+      "eventType": "JobFailed",
+      "severity": "Error",
+      "summary": "A background job depending on the external service has failed",
+      "payload": {
+        "failedJobs": 2,
+        "dependency": "external-service"
+      }
+    },
+    {
+      "delaySeconds": 10,
+      "correlationKey": "transient-failure-recovery",
+      "serviceCode": "payment-gw",
+      "eventType": "ServiceRecovered",
+      "severity": "Info",
+      "summary": "The external service has recovered automatically",
+      "payload": {
+        "responseTimeMs": 32
+      }
+    }
+  ]
+}

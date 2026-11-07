@@ -1,0 +1,64 @@
+{
+  "id": "duplicate-and-out-of-order-events",
+  "name": "Duplicate and Out-of-Order Events (22.6)",
+  "steps": [
+    {
+      "delaySeconds": 0,
+      "correlationKey": "duplicate-and-out-of-order-events",
+      "serviceCode": "orders-api",
+      "eventType": "ServiceDown",
+      "severity": "Critical",
+      "summary": "The backend API has become unavailable",
+      "payload": {
+        "eventRole": "original"
+      }
+    },
+    {
+      "delaySeconds": 3,
+      "correlationKey": "duplicate-and-out-of-order-events",
+      "serviceCode": "orders-api",
+      "eventType": "ServiceDown",
+      "severity": "Critical",
+      "summary": "Duplicate delivery test: resend the previous event using the same EventId",
+      "payload": {
+        "eventRole": "duplicate",
+        "reusePreviousEventId": true
+      }
+    },
+    {
+      "delaySeconds": 5,
+      "correlationKey": "duplicate-and-out-of-order-events",
+      "serviceCode": "postgres-main",
+      "eventType": "DbConnectionError",
+      "severity": "Critical",
+      "summary": "The database connection has failed",
+      "payload": {
+        "eventRole": "database-failure",
+        "occurredAtOffsetSeconds": -20
+      }
+    },
+    {
+      "delaySeconds": 10,
+      "correlationKey": "duplicate-and-out-of-order-events",
+      "serviceCode": "postgres-main",
+      "eventType": "ServiceRecovered",
+      "severity": "Info",
+      "summary": "The database has recovered",
+      "payload": {
+        "eventRole": "database-recovered"
+      }
+    },
+    {
+      "delaySeconds": 5,
+      "correlationKey": "duplicate-and-out-of-order-events",
+      "serviceCode": "postgres-main",
+      "eventType": "DbConnectionError",
+      "severity": "Critical",
+      "summary": "Delayed delivery test: send a database error that occurred earlier",
+      "payload": {
+        "eventRole": "delayed-event",
+        "occurredAtOffsetSeconds": -60
+      }
+    }
+  ]
+}

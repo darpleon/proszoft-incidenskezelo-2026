@@ -13,7 +13,7 @@ services:
     volumes:
       - db-data:/var/opt/mssql
     networks:
-      - net
+      - data
 
   migrations:
     # One-shot job: the backend image with its entrypoint overridden to run
@@ -24,11 +24,12 @@ services:
     entrypoint: ["./migrate"]
     environment:
       - ConnectionStrings__DefaultConnection=Server=db;Database=IncidensKezelo;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True;
+      - Jwt__Key=${JWT_KEY}
     depends_on:
       db:
         condition: service_healthy
     networks:
-      - net
+      - data
 
   backend:
     build:
@@ -43,7 +44,23 @@ services:
       migrations:
         condition: service_completed_successfully
     networks:
-      - net
+      - front
+      - events
+      - data
+
+  simulation:
+    build:
+      context: ./szimulacio/backend/
+    image: szimulacio-backend
+    environment:
+      - IncidentApi__BaseUrl=http://backend:8080/
+    depends_on:
+      backend:
+        condition: service_started
+    ports:
+      - "5161:8080"
+    networks:
+      - events
 
   frontend:
     build: 
@@ -51,7 +68,7 @@ services:
     ports:
       - "80:80"
     networks:
-      - net
+      - front
     depends_on:
       backend:
         condition: service_started
@@ -60,7 +77,11 @@ services:
         restart: true
 
 networks:
-  net:
+  front:
+    driver: bridge
+  events:
+    driver: bridge
+  data:
     driver: bridge
 
 volumes:

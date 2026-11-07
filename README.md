@@ -17,9 +17,9 @@ docker compose up
 ```
 
 Ports exposed:
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:5000
-- Simulation: http://localhost:5040
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:5041
+- Simulation: http://localhost:5161
 - MSSQL: localhost,1433
 
 #### Live builds
@@ -35,6 +35,6 @@ Runs the backend and simulation from your working tree with `dotnet watch`; sour
 
 Ports exposed:
 - Frontend: http://localhost:80
-- Simulation: http://localhost:5040
+- Simulation: http://localhost:5161
 
 (backend and db are not exposed to the host in production)

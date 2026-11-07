@@ -7,7 +7,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
     ports: !override
-      - "5000:8080"
+      - "5041:8080"
 
   simulation:
     environment:
@@ -15,6 +15,6 @@ services:
 
   frontend:
     ports: !override
-      - "3000:80"
+      - "5173:80"
     depends_on:
       - backend

@@ -30,7 +30,7 @@ services:
   frontend:
     # !override is not honored in files pulled in via include. Repeated here.
     ports: !override
-      - "3000:80"
+      - "5173:80"
 
 volumes:
   dev-nuget: {}

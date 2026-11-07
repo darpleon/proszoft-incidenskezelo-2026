@@ -58,7 +58,7 @@ services:
       backend:
         condition: service_started
     ports:
-      - "5040:8080"
+      - "5161:8080"
     networks:
       - events
 

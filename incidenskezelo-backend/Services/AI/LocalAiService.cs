@@ -57,6 +57,7 @@ public sealed class LocalAiService(
 
         if (string.IsNullOrWhiteSpace(_options.BaseUrl) ||
             string.IsNullOrWhiteSpace(_options.Model) ||
+            string.IsNullOrWhiteSpace(_options.ApiKey) ||
             !Uri.TryCreate(_options.BaseUrl, UriKind.Absolute, out _))
         {
             throw new AiProviderUnavailableException(
@@ -66,9 +67,18 @@ public sealed class LocalAiService(
         try
         {
             var url = $"{_options.BaseUrl.TrimEnd('/')}/api/chat";
-            using var response = await httpClient.PostAsJsonAsync(
-                url,
-                body,
+
+            using var httpRequest = new HttpRequestMessage(
+                HttpMethod.Post,
+                url)
+            {
+                Content = JsonContent.Create(body)
+            };
+
+            httpRequest.Headers.Add("x-api-key", _options.ApiKey);
+
+            using var response = await httpClient.SendAsync(
+                httpRequest,
                 cancellationToken);
 
             var responseBody = await response.Content.ReadAsStringAsync(

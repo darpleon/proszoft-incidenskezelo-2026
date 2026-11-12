@@ -161,6 +161,7 @@ public class IncidentAnalysisServiceTests
             Options.Create(new LocalAiOptions
             {
                 BaseUrl = "http://localhost:11434",
+                ApiKey = "test-api-key",
                 Model = "qwen3:8b"
             }));
 
@@ -321,6 +322,7 @@ public class IncidentAnalysisServiceTests
             Options.Create(new LocalAiOptions
             {
                 BaseUrl = "http://localhost:11434",
+                ApiKey = "test-api-key",
                 Model = "qwen3:8b"
             }));
 
@@ -422,6 +424,7 @@ public class IncidentAnalysisServiceTests
             Options.Create(new LocalAiOptions
             {
                 BaseUrl = "http://localhost:11434",
+                ApiKey = "test-api-key",
                 Model = "qwen3:8b"
             }));
 
@@ -504,6 +507,7 @@ public class IncidentAnalysisServiceTests
             Options.Create(new LocalAiOptions
             {
                 BaseUrl = "http://localhost:11434",
+                ApiKey = "test-api-key",
                 Model = "qwen3:8b"
             }));
 
@@ -568,6 +572,7 @@ public class IncidentAnalysisServiceTests
             Options.Create(new LocalAiOptions
             {
                 BaseUrl = "http://localhost:11434",
+                ApiKey = "test-api-key",
                 Model = "qwen3:8b"
             }));
 
@@ -682,6 +687,7 @@ public class IncidentAnalysisServiceTests
             Options.Create(new LocalAiOptions
             {
                 BaseUrl = "http://localhost:11434",
+                ApiKey = "test-api-key",
                 Model = "qwen3:8b"
             }));
 

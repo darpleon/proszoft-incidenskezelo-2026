@@ -20,6 +20,7 @@ builder.Services.AddOpenApi(options =>
 {
     options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
     options.AddOperationTransformer<BearerSecuritySchemeTransformer>();
+    options.AddOperationTransformer<incidenskezelo_backend.Contracts.EventRequestSchemaTransformer>();
 });
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is missing. Set the ConnectionStrings__DefaultConnection environment variable.");
@@ -38,6 +39,12 @@ builder.Services.AddCors(options =>
 
 builder.Services.Configure<GeminiOptions>(
     builder.Configuration.GetSection("Gemini"));
+builder.Services.Configure<incidenskezelo_backend.Configuration.RabbitMqOptions>(
+    builder.Configuration.GetSection("RabbitMQ"));
+builder.Services.Configure<incidenskezelo_backend.Configuration.EventIngestOptions>(
+    builder.Configuration.GetSection("EventIngest"));
+builder.Services.AddSingleton<EventIngestService>();
+builder.Services.AddHostedService<incidenskezelo_backend.Workers.RabbitMqConsumer>();
 
 builder.Services.AddHttpClient<IAiService, GeminiService>();
 builder.Services.AddScoped<EventService>();

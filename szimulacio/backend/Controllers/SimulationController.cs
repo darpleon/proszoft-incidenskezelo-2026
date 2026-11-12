@@ -1,4 +1,4 @@
-﻿using backend.Models;
+using backend.Models;
 using backend.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,7 +9,7 @@ namespace backend.Controllers;
 public class SimulatorController : ControllerBase
 {
     private readonly SimulatorService _simulator;
-    private readonly IncidentApiClient _incidentApi;
+    private readonly IEventPublisher _publisher;
 
     private readonly ScenarioCatalog _scenarioCatalog;
 
@@ -17,12 +17,12 @@ public class SimulatorController : ControllerBase
 
     public SimulatorController(
     SimulatorService simulator,
-    IncidentApiClient incidentApi,
+    IEventPublisher publisher,
     ScenarioCatalog scenarioCatalog,
     ScenarioRunner scenarioRunner)
     {
         _simulator = simulator;
-        _incidentApi = incidentApi;
+        _publisher = publisher;
         _scenarioCatalog = scenarioCatalog;
         _scenarioRunner = scenarioRunner;
     }
@@ -33,16 +33,16 @@ public class SimulatorController : ControllerBase
     {
         var simulatedEvent = _simulator.GenerateEvent();
 
-        try
-        {
-            using var response = await _incidentApi.SendEventAsync(simulatedEvent, cancellationToken);
+        var result = await _publisher.PublishAsync(simulatedEvent, cancellationToken);
 
-            return Ok(new { simulatedEvent, deliveryStatusCode = (int)response.StatusCode });
-        }
-        catch (HttpRequestException)
+        if (!result.IsPublished)
         {
-            return StatusCode(StatusCodes.Status502BadGateway, new { simulatedEvent, error = "Incident API is not reachable." });
+            return StatusCode(
+                StatusCodes.Status502BadGateway,
+                new { simulatedEvent, published = false, error = result.Error });
         }
+
+        return Ok(new { simulatedEvent, published = true });
     }
 
     [HttpGet("scenarios")]

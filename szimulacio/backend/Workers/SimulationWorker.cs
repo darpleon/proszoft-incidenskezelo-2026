@@ -1,4 +1,4 @@
-﻿using backend.Models;
+using backend.Models;
 using backend.Services;
 
 namespace Simulator.Workers;
@@ -6,16 +6,16 @@ namespace Simulator.Workers;
 public class SimulationWorker : BackgroundService
 {
     private readonly SimulatorService _simulator;
-    private readonly IncidentApiClient _incidentApi;
+    private readonly IEventPublisher _publisher;
     private readonly ILogger<SimulationWorker> _logger;
 
     public SimulationWorker(
         SimulatorService simulator,
-        IncidentApiClient incidentApi,
+        IEventPublisher publisher,
         ILogger<SimulationWorker> logger)
     {
         _simulator = simulator;
-        _incidentApi = incidentApi;
+        _publisher = publisher;
         _logger = logger;
     }
 
@@ -40,19 +40,17 @@ public class SimulationWorker : BackgroundService
 
     private async Task SendAsync(SimulationEvent simulatedEvent, CancellationToken stoppingToken)
     {
-        try
-        {
-            using var response = await _incidentApi.SendEventAsync(simulatedEvent, stoppingToken);
+        var result = await _publisher.PublishAsync(simulatedEvent, stoppingToken);
 
-            _logger.LogInformation(
-                "Sent event: {StatusCode}",
-                (int)response.StatusCode);
+        if (result.IsPublished)
+        {
+            _logger.LogInformation("Published event.");
         }
-        catch (HttpRequestException exception)
+        else
         {
             _logger.LogWarning(
-                "Could not send event: {Message}",
-                exception.Message);
+                "Could not publish event: {Error}",
+                result.Error);
         }
     }
 }

@@ -3,6 +3,8 @@ using incidenskezelo_backend.Models;
 using incidenskezelo_backend.Models.Incident;
 using incidenskezelo_backend.Models.Incident.Changes;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
+using System.Text.RegularExpressions;
 
 namespace incidenskezelo_backend.Services;
 
@@ -36,6 +38,83 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
             .Include(i => i.Assignee)
             .Select(i => IncidentResponse.From(i))
             .FirstOrDefaultAsync(ct);
+    }
+    private static Expression<Func<Incident, bool>> BuildSearchPredicate(
+    IReadOnlyCollection<string> terms)
+    {
+        var incident = Expression.Parameter(typeof(Incident), "i");
+        var title = Expression.Property(incident, nameof(Incident.Title));
+        var description = Expression.Property(incident, nameof(Incident.Description));
+        var containsMethod = typeof(string).GetMethod(
+            nameof(string.Contains),
+            [typeof(string)])!;
+
+        Expression body = Expression.Constant(false);
+
+        foreach (var term in terms)
+        {
+            var value = Expression.Constant(term);
+
+            var matchesTitle = Expression.Call(title, containsMethod, value);
+            var matchesDescription = Expression.Call(description, containsMethod, value);
+
+            body = Expression.OrElse(
+                body,
+                Expression.OrElse(matchesTitle, matchesDescription));
+        }
+
+        return Expression.Lambda<Func<Incident, bool>>(body, incident);
+    }
+
+    public async Task<List<PreviousIncidentSearchResult>> SearchPreviousAsync(
+    Guid excludeIncidentId,
+    string query,
+    int limit,
+    CancellationToken ct)
+    {
+        var terms = Regex.Matches(query, @"[\p{L}\p{N}]+")
+            .Cast<Match>()
+            .Select(match => match.Value)
+            .Where(term => term.Length >= 2)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(8)
+            .ToArray();
+
+        if (terms.Length == 0)
+        {
+            return [];
+        }
+
+        var predicate = BuildSearchPredicate(terms);
+
+        var candidates = await context.Incidents
+            .AsNoTracking()
+            .Where(i => i.PublicId != excludeIncidentId)
+            .Where(predicate)
+            .OrderByDescending(i => i.Creation.OccurredAtUtc)
+            .Take(100)
+            .Select(i => new PreviousIncidentSearchResult(
+                i.PublicId,
+                i.Title,
+                i.Description,
+                i.Status,
+                i.Priority,
+                i.Creation.OccurredAtUtc))
+            .ToListAsync(ct);
+
+        return candidates
+            .Select(incident => new
+            {
+                Incident = incident,
+                MatchCount = terms.Count(term =>
+                    incident.Title.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                    incident.Description.Contains(term, StringComparison.OrdinalIgnoreCase))
+            })
+            .OrderByDescending(item => item.MatchCount)
+            .ThenByDescending(item => item.Incident.CreatedAtUtc)
+            .Take(limit)
+            .Select(item => item.Incident)
+            .ToList();
     }
 
     public async Task<IncidentResponse> CreateAsync(CreateIncidentRequest request, int actorUserId, CancellationToken ct)

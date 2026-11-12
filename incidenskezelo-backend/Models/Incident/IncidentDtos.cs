@@ -83,3 +83,11 @@ public record IncidentChangeResponse(
     string? NewValue,
     int? ActorUserId,
     string? ActorName);
+
+public record PreviousIncidentSearchResult(
+    Guid Id,
+    string Title,
+    string Description,
+    IncidentStatus Status,
+    IncidentPriority Priority,
+    DateTime CreatedAtUtc);

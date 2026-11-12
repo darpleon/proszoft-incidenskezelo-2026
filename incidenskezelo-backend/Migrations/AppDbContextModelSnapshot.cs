@@ -22,6 +22,27 @@ namespace incidenskezelo_backend.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("incidenskezelo_backend.Models.AI.StoredIncidentAnalysis", b =>
+                {
+                    b.Property<int>("IncidentId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("AnalyzedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("ResultJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("IncidentId");
+
+                    b.ToTable("IncidentAnalysis", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_IncidentAnalysis_ResultJson", "ISJSON([ResultJson]) = 1");
+                        });
+                });
+
             modelBuilder.Entity("incidenskezelo_backend.Models.Event", b =>
                 {
                     b.Property<long>("EventId")
@@ -486,6 +507,15 @@ namespace incidenskezelo_backend.Migrations
                         {
                             t.HasCheckConstraint("CK_AppUser_Role", "[Role] IN ('Pending', 'Operator', 'Admin')");
                         });
+                });
+
+            modelBuilder.Entity("incidenskezelo_backend.Models.AI.StoredIncidentAnalysis", b =>
+                {
+                    b.HasOne("incidenskezelo_backend.Models.Incident.Incident", null)
+                        .WithOne()
+                        .HasForeignKey("incidenskezelo_backend.Models.AI.StoredIncidentAnalysis", "IncidentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("incidenskezelo_backend.Models.Event", b =>

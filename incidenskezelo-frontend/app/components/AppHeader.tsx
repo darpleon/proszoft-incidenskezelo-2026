@@ -1,5 +1,6 @@
 import { Button, Group, Text } from "@mantine/core";
 import { NavLink, useNavigate } from "react-router";
+import { AppLogo } from "./AppLogo";
 import { BackendStatus } from "./BackendStatus";
 import useAuth from "~/hooks/useAuth";
 import { getInitials } from "~/lib/initials";
@@ -22,9 +23,7 @@ export function AppHeader() {
   return (
     <header className="flex h-[54px] items-center gap-6 bg-nav-bg px-4 text-nav-text max-[680px]:gap-3 max-[680px]:px-3">
       <Group gap={9} wrap="nowrap">
-        <div className="grid size-[25px] place-items-center rounded-[5px] bg-petrol text-xs font-bold text-white">
-          I
-        </div>
+        <AppLogo />
         <Text fw={600} className="text-nav-text-hi tracking-tight max-[680px]:hidden">
           Incident Manager
         </Text>

@@ -1,7 +1,9 @@
+using incidenskezelo_backend.Configuration;
 using incidenskezelo_backend.Contracts;
 using incidenskezelo_backend.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace incidenskezelo_backend.Controllers;
 
@@ -12,26 +14,42 @@ public class EventsController : ControllerBase
     private const int LatestEventCount = 100;
 
     private readonly EventService _eventService;
+    private readonly EventIngestService _ingestService;
+    private readonly EventIngestOptions _ingestOptions;
 
-    public EventsController(EventService eventService)
+    public EventsController(
+        EventService eventService,
+        EventIngestService ingestService,
+        IOptions<EventIngestOptions> ingestOptions)
     {
         _eventService = eventService;
+        _ingestService = ingestService;
+        _ingestOptions = ingestOptions.Value;
     }
 
 
     [HttpPost]
     [AllowAnonymous]
-    public async Task<IActionResult> Create(
-        [FromBody] CreateEventRequest request,
-        CancellationToken cancellationToken)
+    public async Task<IActionResult> Create(CancellationToken cancellationToken)
     {
-        var result = await _eventService.IngestAsync(request, cancellationToken);
-
-        return result.Status switch
+        if (!_ingestOptions.DirectHttpEnabled)
         {
-            EventIngestStatus.Created => CreatedAtAction(nameof(GetById), new { eventId = result.Event!.EventId }, result.Event),
-            EventIngestStatus.AlreadyReceived => Ok(result.Event),
-            _ => Problem(result.Error, statusCode: StatusCodes.Status400BadRequest),
+            return NotFound();
+        }
+
+        using var body = new MemoryStream();
+        await Request.Body.CopyToAsync(body, cancellationToken);
+
+        var outcome = await _ingestService.IngestAsync(body.ToArray(), cancellationToken);
+
+        return outcome.Status switch
+        {
+            EventIngestOutcomeStatus.Created => CreatedAtAction(
+                nameof(GetById), new { eventId = outcome.Event!.EventId }, outcome.Event),
+            EventIngestOutcomeStatus.AlreadyReceived => Ok(outcome.Event),
+            EventIngestOutcomeStatus.TransientFailed => Problem(
+                outcome.Error, statusCode: StatusCodes.Status503ServiceUnavailable),
+            _ => Problem(outcome.Error, statusCode: StatusCodes.Status400BadRequest),
         };
     }
 

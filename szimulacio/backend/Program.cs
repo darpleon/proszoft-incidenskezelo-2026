@@ -14,8 +14,8 @@ builder.Services.AddOpenApi();
 builder.Services.AddSingleton<SimulatorService>();
 builder.Services.AddSingleton<ScenarioCatalog>();
 builder.Services.AddSingleton<ScenarioRunner>();
-builder.Services.Configure<IncidentApiOptions>(builder.Configuration.GetSection("IncidentApi"));
-builder.Services.AddHttpClient<IncidentApiClient>();
+builder.Services.Configure<RabbitMqOptions>(builder.Configuration.GetSection("RabbitMQ"));
+builder.Services.AddSingleton<IEventPublisher, EventPublisher>();
 
 var app = builder.Build();
 

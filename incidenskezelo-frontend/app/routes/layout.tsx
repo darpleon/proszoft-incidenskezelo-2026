@@ -1,5 +1,6 @@
 import { Outlet, redirect } from "react-router";
 import { AppHeader } from "~/components/AppHeader";
+import useAutoRefresh from "~/hooks/useAutoRefresh";
 import { readAuthUser } from "~/lib/authToken";
 
 export function clientLoader() {
@@ -10,6 +11,8 @@ export function clientLoader() {
 }
 
 export default function AppLayout() {
+  useAutoRefresh();
+
   return (
     <>
       <AppHeader />

@@ -4,17 +4,17 @@ namespace backend.Services;
 
 public class ScenarioRunner
 {
-    private readonly IncidentApiClient _incidentApi;
+    private readonly IEventPublisher _publisher;
     private readonly ILogger<ScenarioRunner> _logger;
     private readonly object _lock = new();
 
     private bool _isRunning;
 
     public ScenarioRunner(
-        IncidentApiClient incidentApi,
+        IEventPublisher publisher,
         ILogger<ScenarioRunner> logger)
     {
-        _incidentApi = incidentApi;
+        _publisher = publisher;
         _logger = logger;
     }
 
@@ -53,38 +53,27 @@ public class ScenarioRunner
                     ServiceCode = step.ServiceCode,
                     EventType = step.EventType,
                     Severity = step.Severity,
-                    OccurredAtUtc = DateTime.UtcNow,
+                    OccurredAtUtc = step.OccurredAtUtc ?? DateTime.UtcNow,
                     Summary = step.Summary,
                     Payload = step.Payload
                 };
 
-                try
-                {
-                    using var response = await _incidentApi.SendEventAsync(
-                        simulatedEvent,
-                        CancellationToken.None);
+                var result = await _publisher.PublishAsync(
+                    simulatedEvent,
+                    CancellationToken.None);
 
-                    if (!response.IsSuccessStatusCode)
-                    {
-                        _logger.LogWarning(
-                            "Event from scenario {ScenarioId} returned HTTP {StatusCode}.",
-                            scenario.Id,
-                            (int)response.StatusCode);
-                    }
-                    else
-                    {
-                        _logger.LogInformation(
-                            "Event from scenario {ScenarioId} sent with HTTP {StatusCode}.",
-                            scenario.Id,
-                            (int)response.StatusCode);
-                    }
-                }
-                catch (HttpRequestException exception)
+                if (result.IsPublished)
                 {
-                    _logger.LogError(
-                        exception,
-                        "Could not send an event from scenario {ScenarioId}.",
+                    _logger.LogInformation(
+                        "Event from scenario {ScenarioId} published.",
                         scenario.Id);
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "Could not publish event from scenario {ScenarioId}: {Error}",
+                        scenario.Id,
+                        result.Error);
                 }
             }
         }

@@ -83,6 +83,12 @@ export default function IncidentDetail({ loaderData }: Route.ComponentProps) {
     await revalidator.revalidate();
   };
 
+  const changeTitle = (title: string) =>
+    saveChange(() => api.Incident.updateTitle(incident.id, title, incident.revisions.title));
+
+  const changeDescription = (description: string) =>
+    saveChange(() => api.Incident.updateDescription(incident.id, description, incident.revisions.description));
+
   const changeStatus = (status: IncidentStatus) => {
     if (status === incident.status) return;
     saveChange(() => api.Incident.updateStatus(incident.id, status, incident.revisions.status));
@@ -125,6 +131,7 @@ export default function IncidentDetail({ loaderData }: Route.ComponentProps) {
       <IncidentDetailHeader
         incident={incident}
         assignableUsers={assignableUsers}
+        onTitleSave={changeTitle}
         onStatusChange={changeStatus}
         onPriorityChange={changePriority}
         onAssigneeChange={changeAssignee}
@@ -154,7 +161,7 @@ export default function IncidentDetail({ loaderData }: Route.ComponentProps) {
 
         <div className="min-h-0 flex-1 overflow-y-auto p-[22px] max-[920px]:overflow-visible max-[680px]:px-4">
           <Tabs.Panel value="overview">
-            <IncidentOverview incident={incident} />
+            <IncidentOverview incident={incident} onDescriptionSave={changeDescription} />
           </Tabs.Panel>
           <Tabs.Panel value="events">
             {events.length > 0 ? <EventsTable events={events} /> : <EmptyState>No linked events yet.</EmptyState>}

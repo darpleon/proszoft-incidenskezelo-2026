@@ -3,7 +3,7 @@ import { Alert } from "@mantine/core";
 type FormAlertProps = {
   title: string;
   message: string;
-  color?: "red" | "teal";
+  color?: "red" | "teal" | "yellow";
   onClose?: () => void;
 };
 

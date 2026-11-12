@@ -1,3 +1,4 @@
+import type { AiConfidence } from "~/interfaces/IAiAnalysis";
 import type { EventSeverity } from "~/interfaces/IEvent";
 import type { IncidentPriority, IncidentStatus } from "~/interfaces/IIncident";
 
@@ -76,4 +77,10 @@ export const eventTypeLabels: Record<string, string> = {
   JobFailed: "Background job failed",
   CapacityIssue: "Capacity issue",
   DependencyFailure: "Dependency failure",
+};
+
+export const aiConfidenceTextColors: Record<AiConfidence, string> = {
+  High: "font-semibold text-crit",
+  Medium: "font-medium text-high",
+  Low: "text-text-3",
 };

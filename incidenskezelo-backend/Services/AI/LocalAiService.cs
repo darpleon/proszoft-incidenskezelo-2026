@@ -106,9 +106,8 @@ public sealed class LocalAiService(
                     "Ollama response is missing a valid message object.");
             }
 
-            var assistantMessage = JsonNode.Parse(message.GetRawText())
-                ?? throw new AiInvalidResponseException(
-                    "Ollama returned an empty message object.");
+            var assistantMessage = JsonNode.Parse(message.GetRawText())!;
+            messages.Add(assistantMessage);
 
             var toolCalls = new List<AiToolCall>();
             if (message.TryGetProperty("tool_calls", out var calls))

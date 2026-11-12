@@ -3,11 +3,14 @@ using incidenskezelo_backend.Models.AI;
 using incidenskezelo_backend.Services.AI;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
+using incidenskezelo_backend.Auth;
+using Microsoft.AspNetCore.Authorization;
 
 namespace incidenskezelo_backend.Controllers;
 
 [ApiController]
 [Route("api/ai")]
+[Authorize(Policy = AuthPolicies.CanHandleIncidents)]
 public class AiController : ControllerBase
 {
     private readonly IIncidentAnalysisService _incidentAnalysisService;

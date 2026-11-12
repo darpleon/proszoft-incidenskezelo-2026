@@ -3,6 +3,7 @@ using incidenskezelo_backend.Contracts;
 using incidenskezelo_backend.Data;
 using incidenskezelo_backend.Models.AI;
 using incidenskezelo_backend.Services;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System.Text.Json;
@@ -532,14 +533,18 @@ public sealed class IncidentAnalysisService(
             result,
             new JsonSerializerOptions(JsonSerializerDefaults.Web));
 
+        var isInsert = stored is null;
+
         if (stored is null)
         {
-            dbContext.StoredIncidentAnalyses.Add(new StoredIncidentAnalysis
+            stored = new StoredIncidentAnalysis
             {
                 IncidentId = internalIncidentId.Value,
                 ResultJson = resultJson,
                 AnalyzedAtUtc = timeProvider.GetUtcNow().UtcDateTime
-            });
+            };
+
+            dbContext.StoredIncidentAnalyses.Add(stored);
         }
         else
         {
@@ -547,7 +552,18 @@ public sealed class IncidentAnalysisService(
             stored.AnalyzedAtUtc = timeProvider.GetUtcNow().UtcDateTime;
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex)
+            when (isInsert &&
+                  ex.InnerException is SqlException { Number: 2601 or 2627 } &&
+                  ex.Entries.Count == 1 &&
+                  ReferenceEquals(ex.Entries[0].Entity, stored))
+        {
+            dbContext.Entry(stored).State = EntityState.Detached;
+        }
     }
 
     public async Task<StoredIncidentAnalysis?> GetLatestAsync(

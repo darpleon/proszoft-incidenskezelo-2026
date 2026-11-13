@@ -24,18 +24,26 @@ namespace incidenskezelo_backend.Migrations
 
             modelBuilder.Entity("incidenskezelo_backend.Models.AI.StoredIncidentAnalysis", b =>
                 {
-                    b.Property<int>("IncidentId")
-                        .HasColumnType("int");
+                    b.Property<long>("AnalysisId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("AnalysisId"));
 
                     b.Property<DateTime>("AnalyzedAtUtc")
                         .HasPrecision(3)
                         .HasColumnType("datetime2(3)");
 
+                    b.Property<int>("IncidentId")
+                        .HasColumnType("int");
+
                     b.Property<string>("ResultJson")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.HasKey("IncidentId");
+                    b.HasKey("AnalysisId");
+
+                    b.HasIndex("IncidentId", "AnalyzedAtUtc", "AnalysisId");
 
                     b.ToTable("IncidentAnalysis", null, t =>
                         {
@@ -512,8 +520,8 @@ namespace incidenskezelo_backend.Migrations
             modelBuilder.Entity("incidenskezelo_backend.Models.AI.StoredIncidentAnalysis", b =>
                 {
                     b.HasOne("incidenskezelo_backend.Models.Incident.Incident", null)
-                        .WithOne()
-                        .HasForeignKey("incidenskezelo_backend.Models.AI.StoredIncidentAnalysis", "IncidentId")
+                        .WithMany()
+                        .HasForeignKey("IncidentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

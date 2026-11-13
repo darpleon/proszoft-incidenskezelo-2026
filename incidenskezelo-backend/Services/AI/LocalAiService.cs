@@ -75,7 +75,10 @@ public sealed class LocalAiService(
                 Content = JsonContent.Create(body)
             };
 
-            httpRequest.Headers.Add("x-api-key", _options.ApiKey);
+            httpRequest.Headers.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue(
+                    "Bearer",
+                    _options.ApiKey);
 
             using var response = await httpClient.SendAsync(
                 httpRequest,

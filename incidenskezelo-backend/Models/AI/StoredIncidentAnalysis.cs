@@ -2,6 +2,8 @@
 
 public sealed class StoredIncidentAnalysis
 {
+    public long AnalysisId { get; set; }
+
     // Az Incident tábla belső int kulcsa, egyben ennek a táblának a PK-ja.
     public int IncidentId { get; set; }
 

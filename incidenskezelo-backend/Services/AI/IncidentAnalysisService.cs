@@ -115,6 +115,28 @@ public sealed class IncidentAnalysisService(
             """)
     ];
 
+    public async Task<List<StoredIncidentAnalysis>?> GetHistoryAsync(
+    Guid publicIncidentId,
+    CancellationToken cancellationToken)
+    {
+        var internalIncidentId = await dbContext.Incidents
+            .Where(incident => incident.PublicId == publicIncidentId)
+            .Select(incident => (int?)incident.IncidentId)
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (internalIncidentId is null)
+        {
+            return null;
+        }
+
+        return await dbContext.StoredIncidentAnalyses
+            .AsNoTracking()
+            .Where(analysis => analysis.IncidentId == internalIncidentId.Value)
+            .OrderByDescending(analysis => analysis.AnalyzedAtUtc)
+            .ThenByDescending(analysis => analysis.AnalysisId)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IncidentAnalysisResult> AnalyzeAsync(
         Guid incidentId,
         AiProvider provider,

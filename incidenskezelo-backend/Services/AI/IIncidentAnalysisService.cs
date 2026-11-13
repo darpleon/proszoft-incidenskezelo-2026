@@ -12,4 +12,8 @@ public interface IIncidentAnalysisService
     Task<StoredIncidentAnalysis?> GetLatestAsync(
         Guid incidentId,
         CancellationToken cancellationToken);
+
+    Task<List<StoredIncidentAnalysis>?> GetHistoryAsync(
+        Guid incidentId,
+        CancellationToken cancellationToken);
 }

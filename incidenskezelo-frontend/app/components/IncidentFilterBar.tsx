@@ -186,11 +186,11 @@ export function IncidentFilterBar({ filter, count, services, users }: IncidentFi
           </DetailMenuItem>
         ))}
         {filter.created === "custom" && (
-          <div className="flex gap-1.5 px-2 pt-1 pb-1.5">
+          <div className="flex flex-col gap-1.5 px-2 pt-1 pb-1.5">
             <TextInput
               type="date"
               size="xs"
-              aria-label="Created from"
+              label="From"
               value={filter.from}
               max={filter.to || undefined}
               onChange={(event) => update({ from: event.currentTarget.value }, true)}
@@ -198,7 +198,7 @@ export function IncidentFilterBar({ filter, count, services, users }: IncidentFi
             <TextInput
               type="date"
               size="xs"
-              aria-label="Created to"
+              label="To"
               value={filter.to}
               min={filter.from || undefined}
               onChange={(event) => update({ to: event.currentTarget.value }, true)}

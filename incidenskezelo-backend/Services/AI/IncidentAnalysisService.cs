@@ -115,6 +115,28 @@ public sealed class IncidentAnalysisService(
             """)
     ];
 
+    public async Task<List<StoredIncidentAnalysis>?> GetHistoryAsync(
+    Guid publicIncidentId,
+    CancellationToken cancellationToken)
+    {
+        var internalIncidentId = await dbContext.Incidents
+            .Where(incident => incident.PublicId == publicIncidentId)
+            .Select(incident => (int?)incident.IncidentId)
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (internalIncidentId is null)
+        {
+            return null;
+        }
+
+        return await dbContext.StoredIncidentAnalyses
+            .AsNoTracking()
+            .Where(analysis => analysis.IncidentId == internalIncidentId.Value)
+            .OrderByDescending(analysis => analysis.AnalyzedAtUtc)
+            .ThenByDescending(analysis => analysis.AnalysisId)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IncidentAnalysisResult> AnalyzeAsync(
         Guid incidentId,
         AiProvider provider,
@@ -274,7 +296,7 @@ public sealed class IncidentAnalysisService(
                     Limitations: payload.Limitations ?? [],
                     ToolCalls: toolCallStatuses);
 
-                await SaveLatestAsync(incidentId, result, cancellationToken);
+                await SaveAnalysisAsync(incidentId, result, cancellationToken);
 
                 return result;
             }
@@ -507,63 +529,33 @@ public sealed class IncidentAnalysisService(
         string? Description,
         string? Confidence);
 
-    private async Task SaveLatestAsync(
-    Guid publicIncidentId,
-    IncidentAnalysisResult result,
-    CancellationToken cancellationToken)
+    private async Task SaveAnalysisAsync(
+        Guid publicIncidentId,
+        IncidentAnalysisResult result,
+        CancellationToken cancellationToken)
     {
         var internalIncidentId = await dbContext.Incidents
             .Where(incident => incident.PublicId == publicIncidentId)
             .Select(incident => (int?)incident.IncidentId)
             .SingleOrDefaultAsync(cancellationToken);
 
-        // Ha az incidens nem létezik, ne próbáljunk idegen kulcsot menteni.
-        // A jelenlegi elemzési válasz továbbra is visszaadható.
         if (internalIncidentId is null)
         {
             return;
         }
 
-        var stored = await dbContext.StoredIncidentAnalyses
-            .SingleOrDefaultAsync(
-                analysis => analysis.IncidentId == internalIncidentId.Value,
-                cancellationToken);
-
         var resultJson = JsonSerializer.Serialize(
             result,
             new JsonSerializerOptions(JsonSerializerDefaults.Web));
 
-        var isInsert = stored is null;
+        dbContext.StoredIncidentAnalyses.Add(new StoredIncidentAnalysis
+        {
+            IncidentId = internalIncidentId.Value,
+            ResultJson = resultJson,
+            AnalyzedAtUtc = timeProvider.GetUtcNow().UtcDateTime
+        });
 
-        if (stored is null)
-        {
-            stored = new StoredIncidentAnalysis
-            {
-                IncidentId = internalIncidentId.Value,
-                ResultJson = resultJson,
-                AnalyzedAtUtc = timeProvider.GetUtcNow().UtcDateTime
-            };
-
-            dbContext.StoredIncidentAnalyses.Add(stored);
-        }
-        else
-        {
-            stored.ResultJson = resultJson;
-            stored.AnalyzedAtUtc = timeProvider.GetUtcNow().UtcDateTime;
-        }
-
-        try
-        {
-            await dbContext.SaveChangesAsync(cancellationToken);
-        }
-        catch (DbUpdateException ex)
-            when (isInsert &&
-                  ex.InnerException is SqlException { Number: 2601 or 2627 } &&
-                  ex.Entries.Count == 1 &&
-                  ReferenceEquals(ex.Entries[0].Entity, stored))
-        {
-            dbContext.Entry(stored).State = EntityState.Detached;
-        }
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     public async Task<StoredIncidentAnalysis?> GetLatestAsync(
@@ -582,8 +574,9 @@ public sealed class IncidentAnalysisService(
 
         return await dbContext.StoredIncidentAnalyses
             .AsNoTracking()
-            .SingleOrDefaultAsync(
-                analysis => analysis.IncidentId == internalIncidentId.Value,
-                cancellationToken);
+            .Where(analysis => analysis.IncidentId == internalIncidentId.Value)
+            .OrderByDescending(analysis => analysis.AnalyzedAtUtc)
+            .ThenByDescending(analysis => analysis.AnalysisId)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 }

@@ -120,4 +120,69 @@ public class AiController : ControllerBase
             toolCalls = result.ToolCalls
         });
     }
+
+    [HttpGet("analyze/{incidentId}/history")]
+    public async Task<IActionResult> GetHistory(
+    Guid incidentId,
+    CancellationToken cancellationToken)
+    {
+        if (incidentId == Guid.Empty)
+        {
+            return BadRequest("The incident ID is required.");
+        }
+
+        var history = await _incidentAnalysisService.GetHistoryAsync(
+            incidentId,
+            cancellationToken);
+
+        if (history is null)
+        {
+            return NotFound();
+        }
+
+        var items = new List<object>();
+
+        foreach (var stored in history)
+        {
+            IncidentAnalysisResult? result;
+
+            try
+            {
+                result = JsonSerializer.Deserialize<IncidentAnalysisResult>(
+                    stored.ResultJson,
+                    new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            }
+            catch (JsonException)
+            {
+                return Problem(
+                    statusCode: StatusCodes.Status500InternalServerError,
+                    title: "Stored analysis could not be read",
+                    detail: "A saved analysis could not be loaded.");
+            }
+
+            if (result is null)
+            {
+                return Problem(
+                    statusCode: StatusCodes.Status500InternalServerError,
+                    title: "Stored analysis could not be read",
+                    detail: "A saved analysis could not be loaded.");
+            }
+
+            items.Add(new
+            {
+                analysisId = stored.AnalysisId,
+                incidentId,
+                model = result.Model,
+                analyzedAtUtc = stored.AnalyzedAtUtc,
+                summary = result.Summary,
+                probableCauses = result.ProbableCauses,
+                suggestedActions = result.SuggestedActions,
+                relevantEventIds = result.RelevantEventIds,
+                limitations = result.Limitations,
+                toolCalls = result.ToolCalls
+            });
+        }
+
+        return Ok(items);
+    }
 }

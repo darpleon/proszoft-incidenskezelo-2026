@@ -11,6 +11,7 @@ using incidenskezelo_backend.Services.AI;
 using incidenskezelo_backend.Tests.Helpers;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore;
 
 namespace incidenskezelo_backend.Tests.Services;
 
@@ -542,6 +543,9 @@ public class IncidentAnalysisServiceTests
 
         Assert.AreEqual(1, handler.RequestCount);
         StringAssert.Contains(exception.Message, "invalid analysis JSON");
+        Assert.AreEqual(
+            0,
+            await dbContext.StoredIncidentAnalyses.CountAsync());
     }
 
     [TestMethod]
@@ -624,7 +628,7 @@ public class IncidentAnalysisServiceTests
     }
 
     [TestMethod]
-    public async Task AnalyzeAsync_ValidIncident_ReturnsStructuredAnalysis()
+    public async Task AnalyzeAsync_ValidIncident_ReturnsAndStoresStructuredAnalysis()
     {
         using var dbContext = TestDbContextFactory.Create();
 
@@ -711,10 +715,14 @@ public class IncidentAnalysisServiceTests
             dbContext,
             TimeProvider.System);
 
+        var startedAtUtc = DateTime.UtcNow;
+
         var result = await analysisService.AnalyzeAsync(
             incident.Id,
             AiProvider.Qwen3,
             CancellationToken.None);
+
+        var finishedAtUtc = DateTime.UtcNow;
 
         Assert.AreEqual("Qwen3", result.Model);
         Assert.AreEqual(
@@ -745,6 +753,33 @@ public class IncidentAnalysisServiceTests
 
         StringAssert.Contains(prompt!, "Orders API returns errors");
         StringAssert.Contains(prompt!, "POST /orders returns HTTP 500.");
+
+        // Ne a context által követett objektumból ellenőrizzünk.
+        dbContext.ChangeTracker.Clear();
+
+        var stored = await dbContext.StoredIncidentAnalyses
+            .AsNoTracking()
+            .SingleAsync();
+
+        var internalIncidentId = await dbContext.Incidents
+            .Where(item => item.PublicId == incident.Id)
+            .Select(item => item.IncidentId)
+            .SingleAsync();
+
+        // A mentett elemzés a megfelelő incidenshez tartozik.
+        Assert.AreEqual(internalIncidentId, stored.IncidentId);
+        Assert.IsTrue(stored.AnalysisId > 0);
+
+        // A teljes visszaadott eredmény került mentésre.
+        var expectedJson = JsonSerializer.Serialize(
+            result,
+            new JsonSerializerOptions(JsonSerializerDefaults.Web));
+
+        Assert.AreEqual(expectedJson, stored.ResultJson);
+
+        // A mentési időpont az elemzés futása alatt keletkezett.
+        Assert.IsTrue(stored.AnalyzedAtUtc >= startedAtUtc);
+        Assert.IsTrue(stored.AnalyzedAtUtc <= finishedAtUtc);
     }
 
 }

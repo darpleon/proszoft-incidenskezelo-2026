@@ -98,7 +98,10 @@ namespace incidenskezelo_backend.Data
                         "CK_IncidentAnalysis_ResultJson",
                         "ISJSON([ResultJson]) = 1"));
 
-                entity.HasKey(analysis => analysis.IncidentId);
+                entity.HasKey(analysis => analysis.AnalysisId);
+
+                entity.Property(analysis => analysis.AnalysisId)
+                    .UseIdentityColumn();
 
                 entity.Property(analysis => analysis.ResultJson)
                     .HasColumnType("nvarchar(max)");
@@ -106,10 +109,16 @@ namespace incidenskezelo_backend.Data
                 entity.Property(analysis => analysis.AnalyzedAtUtc)
                     .HasPrecision(3);
 
+                entity.HasIndex(analysis => new
+                {
+                    analysis.IncidentId,
+                    analysis.AnalyzedAtUtc,
+                    analysis.AnalysisId
+                });
+
                 entity.HasOne<Incident>()
-                    .WithOne()
-                    .HasForeignKey<StoredIncidentAnalysis>(
-                        analysis => analysis.IncidentId)
+                    .WithMany()
+                    .HasForeignKey(analysis => analysis.IncidentId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
 

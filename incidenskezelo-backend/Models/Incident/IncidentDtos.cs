@@ -9,6 +9,23 @@ public record CreateIncidentRequest(
     int? AssigneeUserId = null,
     List<long>? EventIds = null);
 
+public record IncidentQuery
+{
+    public List<string> Status { get; init; } = [];
+
+    public List<string> Priority { get; init; } = [];
+
+    public List<string> Service { get; init; } = [];
+
+    public string? Assignee { get; init; }
+
+    public DateTime? From { get; init; }
+
+    public DateTime? To { get; init; }
+
+    public string? Q { get; init; }
+}
+
 public record TransitionRequest(IncidentStatus Status, int? ExpectedRevision);
 
 public record UpdateTitleRequest(string Title, int? ExpectedRevision);

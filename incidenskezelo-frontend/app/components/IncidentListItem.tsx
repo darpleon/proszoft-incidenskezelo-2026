@@ -1,4 +1,4 @@
-import { NavLink } from "react-router";
+import { NavLink, useLocation } from "react-router";
 import type { IIncident } from "~/interfaces/IIncident";
 import { formatAge } from "~/lib/format";
 import { priorityColors, statusLabels } from "~/lib/labels";
@@ -8,9 +8,11 @@ type IncidentListItemProps = {
 };
 
 export function IncidentListItem({ incident }: IncidentListItemProps) {
+  const { search } = useLocation();
+
   return (
     <NavLink
-      to={`/incidents/${incident.id}`}
+      to={{ pathname: `/incidents/${incident.id}`, search }}
       className={({ isActive }) =>
         `group relative block py-2.5 pr-4 pl-[13px] transition-colors motion-reduce:transition-none ${
           isActive ? "bg-panel" : "hover:bg-[#eff2f0]"

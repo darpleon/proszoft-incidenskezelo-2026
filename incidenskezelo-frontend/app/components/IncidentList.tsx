@@ -1,29 +1,19 @@
-import { Button, SegmentedControl, Text, Title } from "@mantine/core";
+import { Button, Title } from "@mantine/core";
 import { IconPlus } from "@tabler/icons-react";
-import { useState } from "react";
-import { Link, useMatch } from "react-router";
+import { Link, useLocation, useMatch } from "react-router";
 import { EmptyState } from "./EmptyState";
 import { IncidentListItem } from "./IncidentListItem";
-import useAuth from "~/hooks/useAuth";
 import type { IIncident } from "~/interfaces/IIncident";
-import { isOpen } from "~/lib/labels";
 
 type IncidentListProps = {
   incidents: IIncident[];
   loadError: boolean;
+  filtered: boolean;
 };
 
-type OwnerFilter = "all" | "mine";
-
-export function IncidentList({ incidents, loadError }: IncidentListProps) {
-  const [ownerFilter, setOwnerFilter] = useState<OwnerFilter>("all");
-  const { user } = useAuth();
+export function IncidentList({ incidents, loadError, filtered }: IncidentListProps) {
+  const { search } = useLocation();
   const isCreating = useMatch("/incidents/new") !== null;
-
-  const visibleIncidents = incidents
-    .filter((incident) => ownerFilter === "all" || incident.assigneeUserId === user?.userId)
-    .sort((a, b) => b.createdAtUtc.localeCompare(a.createdAtUtc));
-  const openCount = visibleIncidents.filter((incident) => isOpen(incident.status)).length;
 
   return (
     <section className="flex w-[312px] shrink-0 flex-col border-r border-list-line bg-list-bg max-[1280px]:w-[272px] max-[920px]:max-h-[42vh] max-[920px]:w-full max-[920px]:border-r-0 max-[920px]:border-b">
@@ -33,7 +23,7 @@ export function IncidentList({ incidents, loadError }: IncidentListProps) {
         </Title>
         <Button
           component={Link}
-          to="/incidents/new"
+          to={{ pathname: "/incidents/new", search }}
           size="compact-xs"
           radius="sm"
           color="#0f717d"
@@ -45,27 +35,14 @@ export function IncidentList({ incidents, loadError }: IncidentListProps) {
         </Button>
       </div>
 
-      <div className="flex items-center justify-between gap-3 px-4 pt-2.5 pb-1">
-        <Text size="xs" className="text-text-2">
-          {openCount} open
-        </Text>
-        <SegmentedControl
-          size="xs"
-          value={ownerFilter}
-          onChange={(value) => setOwnerFilter(value as OwnerFilter)}
-          data={[
-            { value: "all", label: "All" },
-            { value: "mine", label: "Mine" },
-          ]}
-        />
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-y-auto pb-2">
-        {visibleIncidents.map((incident) => (
+      <div className="min-h-0 flex-1 overflow-y-auto pt-1 pb-2">
+        {incidents.map((incident) => (
           <IncidentListItem key={incident.id} incident={incident} />
         ))}
         {loadError && <EmptyState>The incidents could not be loaded.</EmptyState>}
-        {!loadError && visibleIncidents.length === 0 && <EmptyState>No incidents to show.</EmptyState>}
+        {!loadError && incidents.length === 0 && (
+          <EmptyState>{filtered ? "No incidents match these filters." : "No active incidents."}</EmptyState>
+        )}
       </div>
     </section>
   );

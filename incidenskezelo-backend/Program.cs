@@ -57,6 +57,7 @@ builder.Services.AddScoped<AiServiceResolver>();
 builder.Services.AddScoped<IIncidentAnalysisService, IncidentAnalysisService>();
 builder.Services.AddScoped<EventService>();
 builder.Services.AddScoped<IIncidentService, IncidentService>();
+builder.Services.AddScoped<ServiceCatalogService>();
 
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<TokenService>();

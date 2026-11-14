@@ -17,7 +17,7 @@ namespace incidenskezelo_backend.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.12")
+                .HasAnnotation("ProductVersion", "10.0.14")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -93,12 +93,12 @@ namespace incidenskezelo_backend.Migrations
 
                     b.HasKey("EventId");
 
-                    b.HasIndex("IncidentId");
-
                     b.HasIndex("ServiceId");
 
                     b.HasIndex("SourceEventId")
                         .IsUnique();
+
+                    b.HasIndex("IncidentId", "ServiceId");
 
                     b.ToTable("Event", null, t =>
                         {
@@ -169,6 +169,8 @@ namespace incidenskezelo_backend.Migrations
 
                     b.HasIndex("IncidentId")
                         .IsUnique();
+
+                    b.HasIndex("OccurredAtUtc");
 
                     b.ToTable("IncidentCreations");
                 });
@@ -370,8 +372,12 @@ namespace incidenskezelo_backend.Migrations
 
                     b.HasIndex("AssigneeUserId");
 
+                    b.HasIndex("Priority");
+
                     b.HasIndex("PublicId")
                         .IsUnique();
+
+                    b.HasIndex("Status");
 
                     b.ToTable("Incidents");
                 });

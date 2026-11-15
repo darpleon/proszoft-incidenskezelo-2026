@@ -29,6 +29,8 @@ namespace incidenskezelo_backend.Data
         public DbSet<IncidentPriorityChange> IncidentPriorityChanges => Set<IncidentPriorityChange>();
 
         public DbSet<IncidentAssigneeChange> IncidentAssigneeChanges => Set<IncidentAssigneeChange>();
+
+        public DbSet<IncidentComment> IncidentComments => Set<IncidentComment>();
         public DbSet<StoredIncidentAnalysis> StoredIncidentAnalyses =>
             Set<StoredIncidentAnalysis>();
 
@@ -189,6 +191,25 @@ namespace incidenskezelo_backend.Data
             assigneeChange.HasIndex(c => new { c.IncidentId, c.OccurredAtUtc });
             assigneeChange.HasOne<User>().WithMany().HasForeignKey(c => c.OldValue).OnDelete(DeleteBehavior.NoAction);
             assigneeChange.HasOne<User>().WithMany().HasForeignKey(c => c.NewValue).OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<IncidentComment>(entity =>
+            {
+                entity.HasKey(comment => comment.CommentId);
+
+                entity.HasIndex(comment => new { comment.IncidentId, comment.OccurredAtUtc });
+
+                entity.Property(comment => comment.Text).HasMaxLength(IncidentLimits.CommentMaxLength);
+
+                entity.HasOne(comment => comment.Incident)
+                    .WithMany()
+                    .HasForeignKey(comment => comment.IncidentId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(comment => comment.Author)
+                    .WithMany()
+                    .HasForeignKey(comment => comment.AuthorUserId)
+                    .OnDelete(DeleteBehavior.NoAction);
+            });
         }
 
         private sealed class AsUtcConverter() : ValueConverter<DateTime, DateTime>(

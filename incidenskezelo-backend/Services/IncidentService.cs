@@ -288,6 +288,13 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
             .Select(c => new IncidentChangeResponse("created", c.OccurredAtUtc, null, null, c.ActorUserId, c.Actor != null ? c.Actor.Name : null))
             .ToListAsync(ct);
 
+        var comments = await context.IncidentComments.AsNoTracking()
+            .Where(c => c.IncidentId == incidentId)
+            .OrderBy(c => c.OccurredAtUtc)
+            .ThenBy(c => c.CommentId)
+            .Select(c => new IncidentChangeResponse("comment", c.OccurredAtUtc, null, c.Text, c.AuthorUserId, c.Author != null ? c.Author.Name : null))
+            .ToListAsync(ct);
+
         var status = await MapKindAsync(context.IncidentStatusChanges.AsNoTracking().Where(c => c.IncidentId == incidentId), "status", ct);
         var title = await MapKindAsync(context.IncidentTitleChanges.AsNoTracking().Where(c => c.IncidentId == incidentId), "title", ct);
         var description = await MapKindAsync(context.IncidentDescriptionChanges.AsNoTracking().Where(c => c.IncidentId == incidentId), "description", ct);
@@ -304,6 +311,7 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
             .ToListAsync(ct);
 
         return created
+            .Concat(comments)
             .Concat(status)
             .Concat(title)
             .Concat(description)

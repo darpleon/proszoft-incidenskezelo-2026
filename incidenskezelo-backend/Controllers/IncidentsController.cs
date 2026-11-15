@@ -196,6 +196,21 @@ public class IncidentsController(IIncidentService incidentService, EventService 
         }
     }
 
+    [HttpPost("{id}/comments")]
+    [ProducesResponseType(typeof(IncidentCommentResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IncidentCommentResponse>> AddComment(Guid id, CreateCommentRequest request, CancellationToken ct)
+    {
+        if (IncidentValidator.CommentError(request.Text) is { } error)
+        {
+            return Invalid([error]);
+        }
+
+        var comment = await incidentService.AddCommentAsync(id, request.Text, CurrentUserId(), ct);
+        return comment is null ? Missing(id) : StatusCode(StatusCodes.Status201Created, comment);
+    }
+
     [HttpGet("{id}/events")]
     [ProducesResponseType(typeof(List<EventResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]

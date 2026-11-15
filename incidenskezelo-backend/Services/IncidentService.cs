@@ -186,6 +186,22 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
         }, ct);
     }
 
+    public async Task<IncidentCommentResponse?> AddCommentAsync(Guid id, string text, int actorUserId, CancellationToken ct)
+    {
+        var incident = await context.Incidents.FirstOrDefaultAsync(i => i.PublicId == id, ct);
+
+        if (incident is null)
+        {
+            return null;
+        }
+
+        var comment = new IncidentComment(incident, text, NewContext(actorUserId));
+        context.IncidentComments.Add(comment);
+        await context.SaveChangesAsync(ct);
+
+        return new IncidentCommentResponse(comment.OccurredAtUtc, comment.Text, comment.AuthorUserId);
+    }
+
     private async Task<IncidentResponse?> ApplyAsync(Guid id, int actorUserId, Action<Incident, ChangeContext> update, CancellationToken ct)
     {
         var incident = await LoadWithHistoryAsync(id, ct);

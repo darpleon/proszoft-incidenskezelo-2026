@@ -1,7 +1,7 @@
 import { Menu, Text, TextInput, UnstyledButton } from "@mantine/core";
 import { useDebouncedValue } from "@mantine/hooks";
 import { IconSearch } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 import { DetailMenuItem } from "./DetailMenu";
 import { FilterMenu } from "./FilterMenu";
@@ -44,6 +44,7 @@ export function IncidentFilterBar({ filter, count, services, users }: IncidentFi
   const { user } = useAuth();
   const [search, setSearch] = useState(filter.q);
   const [debouncedSearch] = useDebouncedValue(search, 300);
+  const writtenQuery = useRef(filter.q);
   const myId = user ? String(user.userId) : "";
 
   const update = (changes: Partial<IIncidentFilter>, replace = false) => {
@@ -52,9 +53,17 @@ export function IncidentFilterBar({ filter, count, services, users }: IncidentFi
 
   useEffect(() => {
     if (debouncedSearch.trim() !== filter.q) {
+      writtenQuery.current = debouncedSearch.trim();
       update({ q: debouncedSearch.trim() }, true);
     }
   }, [debouncedSearch]);
+
+  useEffect(() => {
+    if (filter.q !== writtenQuery.current) {
+      writtenQuery.current = filter.q;
+      setSearch(filter.q);
+    }
+  }, [filter.q]);
 
   const reset = () => {
     setSearch("");

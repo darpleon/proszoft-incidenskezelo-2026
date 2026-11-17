@@ -1,5 +1,6 @@
 import { TextInput, Title } from "@mantine/core";
 import { useState } from "react";
+import { Link } from "react-router";
 import api from "~/api/api";
 import { EmptyState } from "~/components/EmptyState";
 import { EventsTable } from "~/components/EventsTable";
@@ -10,12 +11,21 @@ export function meta({}: Route.MetaArgs) {
   return [{ title: "Events | Incident Manager" }];
 }
 
+async function loadRejectedCount() {
+  try {
+    const response = await api.RejectedEvent.getLatest();
+    return response.data.length;
+  } catch {
+    return 0;
+  }
+}
+
 export async function clientLoader() {
   try {
-    const response = await api.Event.getLatest();
-    return { events: response.data, loadError: false };
+    const [response, rejectedCount] = await Promise.all([api.Event.getLatest(), loadRejectedCount()]);
+    return { events: response.data, rejectedCount, loadError: false };
   } catch {
-    return { events: [] as IEvent[], loadError: true };
+    return { events: [] as IEvent[], rejectedCount: 0, loadError: true };
   }
 }
 
@@ -27,7 +37,7 @@ function matchesSearch(event: IEvent, search: string) {
 }
 
 export default function Events({ loaderData }: Route.ComponentProps) {
-  const { events, loadError } = loaderData;
+  const { events, rejectedCount, loadError } = loaderData;
   const [search, setSearch] = useState("");
 
   const visibleEvents = events
@@ -44,6 +54,11 @@ export default function Events({ loaderData }: Route.ComponentProps) {
 
       <div className="flex flex-wrap items-center gap-3 px-[22px] pt-4 pb-3 max-[680px]:px-4">
         <p className="text-[11.5px] text-text-3">Latest {events.length} events</p>
+        {rejectedCount > 0 && (
+          <Link to="/rejected-events" className="text-[12.5px] text-crit hover:underline">
+            {rejectedCount === 1 ? "1 rejected event" : `${rejectedCount} rejected events`}
+          </Link>
+        )}
         <TextInput
           value={search}
           onChange={(event) => setSearch(event.currentTarget.value)}

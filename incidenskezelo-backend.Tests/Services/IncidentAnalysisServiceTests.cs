@@ -782,6 +782,65 @@ public class IncidentAnalysisServiceTests
         Assert.IsTrue(stored.AnalyzedAtUtc <= finishedAtUtc);
     }
 
+
+    [TestMethod]
+    public async Task AnalyzeAsync_AiUnreachable_ThrowsUnavailableAndSavesNothing()
+    {
+        using var dbContext = TestDbContextFactory.Create();
+
+        var user = new User
+        {
+            Name = "Test Operator",
+            Email = "operator@example.com",
+            Role = UserRole.Operator,
+            IsActive = true,
+            CreatedAtUtc = DateTime.UtcNow
+        };
+
+        dbContext.Users.Add(user);
+        await dbContext.SaveChangesAsync();
+
+        var incidentService = new IncidentService(dbContext, TimeProvider.System);
+
+        var incident = await incidentService.CreateAsync(
+            new CreateIncidentRequest(
+                "Orders API returns errors",
+                "POST /orders returns HTTP 500.",
+                IncidentPriority.High),
+            user.UserId,
+            CancellationToken.None);
+
+        using var httpClient = new HttpClient(new UnreachableHttpMessageHandler());
+
+        var localAiService = new LocalAiService(
+            httpClient,
+            Options.Create(new LocalAiOptions
+            {
+                BaseUrl = "http://localhost:11434",
+                ApiKey = "test-api-key",
+                Model = "qwen3:8b"
+            }));
+
+        var geminiService = new GeminiService(
+            httpClient,
+            Options.Create(new GeminiOptions
+            {
+                ApiKey = "",
+                Model = ""
+            }));
+
+        var analysisService = new IncidentAnalysisService(
+            new AiServiceResolver(geminiService, localAiService),
+            incidentService,
+            new EventService(dbContext, NullLogger<EventService>.Instance),
+            dbContext,
+            TimeProvider.System);
+
+        await Assert.ThrowsExactlyAsync<AiProviderUnavailableException>(() =>
+            analysisService.AnalyzeAsync(incident.Id, AiProvider.Qwen3, CancellationToken.None));
+
+        Assert.AreEqual(0, dbContext.StoredIncidentAnalyses.Count());
+    }
 }
 
 internal sealed class StubHttpMessageHandler(params string[] responseBodies)
@@ -810,5 +869,15 @@ internal sealed class StubHttpMessageHandler(params string[] responseBodies)
                 Encoding.UTF8,
                 "application/json")
         };
+    }
+}
+
+internal sealed class UnreachableHttpMessageHandler : HttpMessageHandler
+{
+    protected override Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request,
+        CancellationToken cancellationToken)
+    {
+        throw new HttpRequestException("Connection refused.");
     }
 }

@@ -4,6 +4,7 @@ import type { AiModel, IAiAnalysis } from "~/interfaces/IAiAnalysis";
 import type { IEvent } from "~/interfaces/IEvent";
 import type { IHealth } from "~/interfaces/IHealth";
 import type { ICreateIncidentRequest, IIncident, IncidentPriority, IncidentStatus } from "~/interfaces/IIncident";
+import type { IIncidentChange } from "~/interfaces/IIncidentChange";
 import type { IService } from "~/interfaces/IService";
 import type { IAssignableUser, ILoginResponse, IUser, UserRole } from "~/interfaces/IUser";
 
@@ -29,6 +30,7 @@ const Incident = {
   getById: (id: string) => axiosInstance.get<IIncident>(`/incidents/${id}`),
   create: (request: ICreateIncidentRequest) => axiosInstance.post<IIncident>(`/incidents`, request),
   getEvents: (id: string) => axiosInstance.get<IEvent[]>(`/incidents/${id}/events`),
+  getHistory: (id: string) => axiosInstance.get<IIncidentChange[]>(`/incidents/${id}/history`),
   updateTitle: (id: string, title: string, expectedRevision: number) =>
     axiosInstance.patch<IIncident>(`/incidents/${id}/title`, { title, expectedRevision }),
   updateDescription: (id: string, description: string, expectedRevision: number) =>

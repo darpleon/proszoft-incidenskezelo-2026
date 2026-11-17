@@ -60,7 +60,7 @@ public sealed class IncidentAnalysisService(
 
         new AiToolDefinition(
             GetIncidentHistoryName,
-            "Retrieves the chronological change history of the incident being analyzed, including its creation and changes to status, title, description, priority, and assignee.",
+            "Retrieves the chronological change history of the incident being analyzed, including its creation and changes to status, title, description, priority, and assignee, linked events, and earlier AI analyses.",
             """
             {
               "type": "object",
@@ -140,6 +140,7 @@ public sealed class IncidentAnalysisService(
     public async Task<IncidentAnalysisResult> AnalyzeAsync(
         Guid incidentId,
         AiProvider provider,
+        int requestedByUserId,
         CancellationToken cancellationToken = default)
     {
         var executedToolCallCount = 0;
@@ -296,7 +297,7 @@ public sealed class IncidentAnalysisService(
                     Limitations: payload.Limitations ?? [],
                     ToolCalls: toolCallStatuses);
 
-                await SaveAnalysisAsync(incidentId, result, cancellationToken);
+                await SaveAnalysisAsync(incidentId, requestedByUserId, result, cancellationToken);
 
                 return result;
             }
@@ -531,6 +532,7 @@ public sealed class IncidentAnalysisService(
 
     private async Task SaveAnalysisAsync(
         Guid publicIncidentId,
+        int requestedByUserId,
         IncidentAnalysisResult result,
         CancellationToken cancellationToken)
     {
@@ -552,7 +554,8 @@ public sealed class IncidentAnalysisService(
         {
             IncidentId = internalIncidentId.Value,
             ResultJson = resultJson,
-            AnalyzedAtUtc = timeProvider.GetUtcNow().UtcDateTime
+            AnalyzedAtUtc = timeProvider.GetUtcNow().UtcDateTime,
+            RequestedByUserId = requestedByUserId
         });
 
         await dbContext.SaveChangesAsync(cancellationToken);

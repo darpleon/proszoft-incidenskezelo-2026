@@ -7,6 +7,7 @@ public interface IIncidentAnalysisService
     Task<IncidentAnalysisResult> AnalyzeAsync(
         Guid incidentId,
         AiProvider provider,
+        int requestedByUserId,
         CancellationToken cancellationToken = default);
 
     Task<StoredIncidentAnalysis?> GetLatestAsync(

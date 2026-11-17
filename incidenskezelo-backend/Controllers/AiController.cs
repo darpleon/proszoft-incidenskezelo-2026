@@ -38,6 +38,7 @@ public class AiController : ControllerBase
             var result = await _incidentAnalysisService.AnalyzeAsync(
                 incidentId,
                 request.Model,
+                CurrentUserId(),
                 cancellationToken);
 
             return Ok(new
@@ -184,5 +185,10 @@ public class AiController : ControllerBase
         }
 
         return Ok(items);
+    }
+
+    private int CurrentUserId()
+    {
+        return int.Parse(User.FindFirst(TokenClaims.UserId)!.Value);
     }
 }

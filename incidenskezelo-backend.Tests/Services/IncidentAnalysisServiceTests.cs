@@ -192,6 +192,7 @@ public class IncidentAnalysisServiceTests
         var result = await analysisService.AnalyzeAsync(
             incident.Id,
             AiProvider.Qwen3,
+            user.UserId,
             CancellationToken.None);
 
         Assert.AreEqual(2, handler.RequestCount);
@@ -353,6 +354,7 @@ public class IncidentAnalysisServiceTests
         var result = await analysisService.AnalyzeAsync(
             incident.Id,
             AiProvider.Qwen3,
+            user.UserId,
             CancellationToken.None);
 
         Assert.AreEqual(2, handler.RequestCount);
@@ -456,6 +458,7 @@ public class IncidentAnalysisServiceTests
             () => analysisService.AnalyzeAsync(
                 incident.Id,
                 AiProvider.Qwen3,
+                user.UserId,
                 CancellationToken.None));
 
         Assert.AreEqual(1, handler.RequestCount);
@@ -539,6 +542,7 @@ public class IncidentAnalysisServiceTests
             () => analysisService.AnalyzeAsync(
                 incident.Id,
                 AiProvider.Qwen3,
+                user.UserId,
                 CancellationToken.None));
 
         Assert.AreEqual(1, handler.RequestCount);
@@ -608,6 +612,7 @@ public class IncidentAnalysisServiceTests
         var result = await analysisService.AnalyzeAsync(
             missingIncidentId,
             AiProvider.Qwen3,
+            1,
             CancellationToken.None);
 
         Assert.AreEqual(0, handler.RequestCount);
@@ -720,6 +725,7 @@ public class IncidentAnalysisServiceTests
         var result = await analysisService.AnalyzeAsync(
             incident.Id,
             AiProvider.Qwen3,
+            user.UserId,
             CancellationToken.None);
 
         var finishedAtUtc = DateTime.UtcNow;
@@ -769,6 +775,7 @@ public class IncidentAnalysisServiceTests
         // A mentett elemzés a megfelelő incidenshez tartozik.
         Assert.AreEqual(internalIncidentId, stored.IncidentId);
         Assert.IsTrue(stored.AnalysisId > 0);
+        Assert.AreEqual(user.UserId, stored.RequestedByUserId);
 
         // A teljes visszaadott eredmény került mentésre.
         var expectedJson = JsonSerializer.Serialize(

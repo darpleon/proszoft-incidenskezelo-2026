@@ -1,4 +1,5 @@
 using incidenskezelo_backend.Configuration;
+using incidenskezelo_backend.Models;
 using incidenskezelo_backend.Services;
 using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
@@ -145,10 +146,12 @@ public sealed class RabbitMqConsumer : BackgroundService
         BasicDeliverEventArgs eventArgs,
         CancellationToken stoppingToken)
     {
-        var outcome = await _ingestService.IngestAsync(eventArgs.Body, stoppingToken);
+        var outcome = await _ingestService.IngestAsync(eventArgs.Body, RejectedEventSource.Queue, stoppingToken);
 
-        if (outcome.Status is EventIngestOutcomeStatus.Malformed
-            or EventIngestOutcomeStatus.TransientFailed)
+        var handled = outcome.Recorded
+            || outcome.Status is EventIngestOutcomeStatus.Created or EventIngestOutcomeStatus.AlreadyReceived;
+
+        if (!handled)
         {
             await channel.BasicRejectAsync(eventArgs.DeliveryTag, requeue: false);
             return;

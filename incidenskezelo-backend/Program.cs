@@ -56,6 +56,7 @@ builder.Services.AddHttpClient<LocalAiService>();
 builder.Services.AddScoped<AiServiceResolver>();
 builder.Services.AddScoped<IIncidentAnalysisService, IncidentAnalysisService>();
 builder.Services.AddScoped<EventService>();
+builder.Services.AddScoped<RejectedEventService>();
 builder.Services.AddScoped<IIncidentService, IncidentService>();
 builder.Services.AddScoped<ServiceCatalogService>();
 

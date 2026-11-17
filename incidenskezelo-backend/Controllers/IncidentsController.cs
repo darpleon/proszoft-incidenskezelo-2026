@@ -15,9 +15,22 @@ public class IncidentsController(IIncidentService incidentService, EventService 
 {
     [HttpGet]
     [ProducesResponseType(typeof(List<IncidentResponse>), StatusCodes.Status200OK)]
-    public async Task<ActionResult<List<IncidentResponse>>> GetAll(CancellationToken ct)
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<List<IncidentResponse>>> GetAll([FromQuery] IncidentQuery query, CancellationToken ct)
     {
-        return await incidentService.GetAllAsync(ct);
+        try
+        {
+            return await incidentService.GetAllAsync(query, ct);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new ProblemDetails
+            {
+                Title = "Invalid filter",
+                Detail = ex.Message,
+                Status = StatusCodes.Status400BadRequest
+            });
+        }
     }
 
     [HttpGet("{id}")]

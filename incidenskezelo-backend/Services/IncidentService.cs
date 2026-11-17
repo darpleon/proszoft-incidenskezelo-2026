@@ -10,9 +10,11 @@ namespace incidenskezelo_backend.Services;
 
 public class IncidentService(AppDbContext context, TimeProvider timeProvider) : IIncidentService
 {
-    public async Task<List<IncidentResponse>> GetAllAsync(CancellationToken ct)
+    public async Task<List<IncidentResponse>> GetAllAsync(IncidentQuery query, CancellationToken ct)
     {
-        return await context.Incidents.AsNoTracking()
+        var incidents = await FilterAsync(context.Incidents.AsNoTracking(), query, ct);
+
+        return await incidents
             .Include(i => i.Creation)
             .Include(i => i.StatusHistory)
             .Include(i => i.TitleHistory)
@@ -23,6 +25,125 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
             .OrderByDescending(i => i.Creation.OccurredAtUtc)
             .Select(i => IncidentResponse.From(i))
             .ToListAsync(ct);
+    }
+
+    private async Task<IQueryable<Incident>> FilterAsync(IQueryable<Incident> incidents, IncidentQuery query, CancellationToken ct)
+    {
+        var statuses = ParseNames<IncidentStatus>(query.Status, "status");
+        var priorities = ParseNames<IncidentPriority>(query.Priority, "priority");
+        var serviceIds = await FindServiceIdsAsync(query.Service, ct);
+        var from = AsUtc(query.From);
+        var to = AsUtc(query.To);
+
+        if (from > to)
+        {
+            throw new ArgumentException("The 'from' time must be before the 'to' time.");
+        }
+
+        if (statuses.Count > 0)
+        {
+            incidents = incidents.Where(i => statuses.Contains(i.Status));
+        }
+
+        if (priorities.Count > 0)
+        {
+            incidents = incidents.Where(i => priorities.Contains(i.Priority));
+        }
+
+        if (serviceIds.Count > 0)
+        {
+            incidents = incidents.Where(i => i.Events.Any(e => serviceIds.Contains(e.ServiceId)));
+        }
+
+        if (from is not null)
+        {
+            incidents = incidents.Where(i => i.Creation.OccurredAtUtc >= from);
+        }
+
+        if (to is not null)
+        {
+            incidents = incidents.Where(i => i.Creation.OccurredAtUtc <= to);
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Q))
+        {
+            var text = query.Q.Trim();
+            incidents = incidents.Where(i => i.Title.Contains(text));
+        }
+
+        return FilterAssignee(incidents, query.Assignee);
+    }
+
+    private static IQueryable<Incident> FilterAssignee(IQueryable<Incident> incidents, string? assignee)
+    {
+        if (string.IsNullOrWhiteSpace(assignee))
+        {
+            return incidents;
+        }
+
+        if (assignee == "none")
+        {
+            return incidents.Where(i => i.AssigneeUserId == null);
+        }
+
+        if (int.TryParse(assignee, out var userId))
+        {
+            return incidents.Where(i => i.AssigneeUserId == userId);
+        }
+
+        throw new ArgumentException($"Unknown assignee '{assignee}'. Use a user id or 'none'.");
+    }
+
+    private async Task<List<int>> FindServiceIdsAsync(List<string> codes, CancellationToken ct)
+    {
+        if (codes.Count == 0)
+        {
+            return [];
+        }
+
+        var services = await context.Services.AsNoTracking()
+            .Where(s => codes.Contains(s.Code))
+            .Select(s => new { s.ServiceId, s.Code })
+            .ToListAsync(ct);
+
+        var unknown = codes.FirstOrDefault(code => services.All(s => s.Code != code));
+
+        if (unknown is not null)
+        {
+            throw new ArgumentException($"Unknown service code '{unknown}'.");
+        }
+
+        return services.Select(s => s.ServiceId).ToList();
+    }
+
+    private static List<TEnum> ParseNames<TEnum>(List<string> values, string field) where TEnum : struct, Enum
+    {
+        var result = new List<TEnum>();
+
+        foreach (var value in values)
+        {
+            if (!Enum.TryParse(value, ignoreCase: true, out TEnum parsed)
+                || !Enum.GetNames<TEnum>().Contains(value, StringComparer.OrdinalIgnoreCase))
+            {
+                throw new ArgumentException($"Unknown {field} '{value}'.");
+            }
+
+            result.Add(parsed);
+        }
+
+        return result;
+    }
+
+    private static DateTime? AsUtc(DateTime? value)
+    {
+        if (value is not { } time)
+        {
+            return null;
+        }
+
+        return time.Kind == DateTimeKind.Unspecified
+            ? DateTime.SpecifyKind(time, DateTimeKind.Utc)
+            : time.ToUniversalTime();
     }
 
     public async Task<IncidentResponse?> GetByIdAsync(Guid id, CancellationToken ct)

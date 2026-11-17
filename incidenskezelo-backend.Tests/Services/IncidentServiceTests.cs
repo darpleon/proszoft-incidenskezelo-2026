@@ -11,6 +11,7 @@ public class IncidentServiceTests
 {
     private AppDbContext _dbContext = null!;
     private IncidentService _incidentService = null!;
+    private ManualTimeProvider _clock = null!;
     private User _operator = null!;
 
 
@@ -18,7 +19,8 @@ public class IncidentServiceTests
     public void Setup()
     {
         _dbContext = TestDbContextFactory.Create();
-        _incidentService = new IncidentService(_dbContext, TimeProvider.System);
+        _clock = new ManualTimeProvider();
+        _incidentService = new IncidentService(_dbContext, _clock);
         _operator = AddUser("Kovács Anna", UserRole.Operator);
     }
 
@@ -145,6 +147,159 @@ public class IncidentServiceTests
     }
 
 
+    [TestMethod]
+    public async Task GetAllAsync_NoFilter_ReturnsAllNewestFirst()
+    {
+        await CreateIncidentAsync("Older");
+        _clock.Advance(TimeSpan.FromMinutes(5));
+        await CreateIncidentAsync("Newer");
+
+        var result = await _incidentService.GetAllAsync(new IncidentQuery(), CancellationToken.None);
+
+        CollectionAssert.AreEqual(new[] { "Newer", "Older" }, result.Select(i => i.Title).ToArray());
+    }
+
+
+    [TestMethod]
+    public async Task GetAllAsync_StatusFilter_ReturnsOnlyMatching()
+    {
+        await CreateIncidentAsync("Still open");
+        var investigated = await CreateIncidentAsync("Investigated");
+        await _incidentService.TransitionAsync(investigated.Id, IncidentStatus.Investigating, 0, _operator.UserId, CancellationToken.None);
+
+        var result = await _incidentService.GetAllAsync(new IncidentQuery { Status = ["Investigating", "InProgress"] }, CancellationToken.None);
+
+        Assert.AreEqual("Investigated", result.Single().Title);
+    }
+
+
+    [TestMethod]
+    public async Task GetAllAsync_PriorityFilter_ReturnsOnlyMatching()
+    {
+        await CreateIncidentAsync("Critical one", IncidentPriority.Critical);
+        await CreateIncidentAsync("Low one", IncidentPriority.Low);
+
+        var result = await _incidentService.GetAllAsync(new IncidentQuery { Priority = ["Critical"] }, CancellationToken.None);
+
+        Assert.AreEqual("Critical one", result.Single().Title);
+    }
+
+
+    [TestMethod]
+    public async Task GetAllAsync_ServiceFilter_MatchesLinkedEvents()
+    {
+        var databaseEvent = AddEvent(serviceId: 1);
+        var portalEvent = AddEvent(serviceId: 4);
+        await CreateIncidentAsync("Database issue", eventIds: [databaseEvent.EventId]);
+        await CreateIncidentAsync("Portal issue", eventIds: [portalEvent.EventId]);
+        await CreateIncidentAsync("No events");
+
+        var result = await _incidentService.GetAllAsync(new IncidentQuery { Service = ["postgres-main"] }, CancellationToken.None);
+
+        Assert.AreEqual("Database issue", result.Single().Title);
+    }
+
+
+    [TestMethod]
+    public async Task GetAllAsync_AssigneeFilter_ReturnsOnlyThatUser()
+    {
+        var other = AddUser("Tóth Bence", UserRole.Operator);
+        await CreateIncidentAsync("Mine", assigneeUserId: _operator.UserId);
+        await CreateIncidentAsync("Theirs", assigneeUserId: other.UserId);
+        await CreateIncidentAsync("Nobody");
+
+        var result = await _incidentService.GetAllAsync(new IncidentQuery { Assignee = _operator.UserId.ToString() }, CancellationToken.None);
+
+        Assert.AreEqual("Mine", result.Single().Title);
+    }
+
+
+    [TestMethod]
+    public async Task GetAllAsync_UnassignedFilter_ReturnsOnlyUnassigned()
+    {
+        await CreateIncidentAsync("Mine", assigneeUserId: _operator.UserId);
+        await CreateIncidentAsync("Nobody");
+
+        var result = await _incidentService.GetAllAsync(new IncidentQuery { Assignee = "none" }, CancellationToken.None);
+
+        Assert.AreEqual("Nobody", result.Single().Title);
+    }
+
+
+    [TestMethod]
+    public async Task GetAllAsync_CreatedRange_ReturnsOnlyCreatedInside()
+    {
+        var start = _clock.GetUtcNow().UtcDateTime;
+        await CreateIncidentAsync("Before");
+        _clock.Advance(TimeSpan.FromHours(2));
+        await CreateIncidentAsync("Inside");
+        _clock.Advance(TimeSpan.FromHours(2));
+        await CreateIncidentAsync("After");
+
+        var query = new IncidentQuery { From = start.AddHours(1), To = start.AddHours(3) };
+        var result = await _incidentService.GetAllAsync(query, CancellationToken.None);
+
+        Assert.AreEqual("Inside", result.Single().Title);
+    }
+
+
+    [TestMethod]
+    public async Task GetAllAsync_TextSearch_MatchesTitle()
+    {
+        await CreateIncidentAsync("Orders API latency");
+        await CreateIncidentAsync("Disk full");
+
+        var result = await _incidentService.GetAllAsync(new IncidentQuery { Q = "  latency " }, CancellationToken.None);
+
+        Assert.AreEqual("Orders API latency", result.Single().Title);
+    }
+
+
+    [TestMethod]
+    public async Task GetAllAsync_CombinedFilters_AppliesAll()
+    {
+        await CreateIncidentAsync("High and mine", IncidentPriority.High, _operator.UserId);
+        await CreateIncidentAsync("High, nobody", IncidentPriority.High);
+        await CreateIncidentAsync("Low and mine", IncidentPriority.Low, _operator.UserId);
+
+        var query = new IncidentQuery { Priority = ["High"], Assignee = _operator.UserId.ToString() };
+        var result = await _incidentService.GetAllAsync(query, CancellationToken.None);
+
+        Assert.AreEqual("High and mine", result.Single().Title);
+    }
+
+
+    [TestMethod]
+    [DataRow("status", DisplayName = "unknown status")]
+    [DataRow("priority", DisplayName = "unknown priority")]
+    [DataRow("service", DisplayName = "unknown service")]
+    [DataRow("assignee", DisplayName = "unknown assignee")]
+    public async Task GetAllAsync_UnknownValue_ThrowsArgumentException(string field)
+    {
+        var query = field switch
+        {
+            "status" => new IncidentQuery { Status = ["Closed"] },
+            "priority" => new IncidentQuery { Priority = ["Urgent"] },
+            "service" => new IncidentQuery { Service = ["mail-server"] },
+            _ => new IncidentQuery { Assignee = "someone" }
+        };
+
+        await Assert.ThrowsExactlyAsync<ArgumentException>(() =>
+            _incidentService.GetAllAsync(query, CancellationToken.None));
+    }
+
+
+    [TestMethod]
+    public async Task GetAllAsync_FromAfterTo_ThrowsArgumentException()
+    {
+        var now = _clock.GetUtcNow().UtcDateTime;
+        var query = new IncidentQuery { From = now, To = now.AddDays(-1) };
+
+        await Assert.ThrowsExactlyAsync<ArgumentException>(() =>
+            _incidentService.GetAllAsync(query, CancellationToken.None));
+    }
+
+
     private async Task<IncidentResponse> CreateIncidentAsync()
     {
         var request = new CreateIncidentRequest("Database connection lost", "postgres-main refuses connections.", IncidentPriority.High);
@@ -153,12 +308,24 @@ public class IncidentServiceTests
     }
 
 
-    private Event AddEvent()
+    private async Task<IncidentResponse> CreateIncidentAsync(
+        string title,
+        IncidentPriority priority = IncidentPriority.Medium,
+        int? assigneeUserId = null,
+        List<long>? eventIds = null)
+    {
+        var request = new CreateIncidentRequest(title, "Test incident.", priority, assigneeUserId, eventIds);
+
+        return await _incidentService.CreateAsync(request, _operator.UserId, CancellationToken.None);
+    }
+
+
+    private Event AddEvent(int serviceId = 1)
     {
         var evt = new Event
         {
             SourceEventId = Guid.NewGuid().ToString(),
-            ServiceId = 1,
+            ServiceId = serviceId,
             EventType = EventType.HighErrorRate,
             Severity = Severity.Error,
             OccurredAtUtc = DateTime.UtcNow,

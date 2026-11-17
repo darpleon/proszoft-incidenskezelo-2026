@@ -128,6 +128,11 @@ namespace incidenskezelo_backend.Data
             incident.Property(i => i.Description).HasMaxLength(IncidentLimits.DescriptionMaxLength);
 
             incident.HasIndex(i => i.PublicId).IsUnique();
+            incident.HasIndex(i => i.Status);
+            incident.HasIndex(i => i.Priority);
+
+            modelBuilder.Entity<IncidentCreation>().HasIndex(c => c.OccurredAtUtc);
+            modelBuilder.Entity<Event>().HasIndex(evt => new { evt.IncidentId, evt.ServiceId });
 
             incident.HasMany(i => i.Events)
                 .WithOne()

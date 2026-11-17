@@ -1,7 +1,7 @@
 import { Button, Input, Textarea, TextInput, Title } from "@mantine/core";
 import { isAxiosError } from "axios";
 import { useState, type FormEvent } from "react";
-import { useNavigate, useRevalidator } from "react-router";
+import { useLocation, useNavigate, useRevalidator } from "react-router";
 import api from "~/api/api";
 import { AssigneeMenu } from "~/components/AssigneeMenu";
 import { EventPicker } from "~/components/EventPicker";
@@ -40,6 +40,7 @@ function createErrorMessage(error: unknown) {
 export default function IncidentNew({ loaderData }: Route.ComponentProps) {
   const { events, eventsLoadError, assignableUsers } = loaderData;
   const navigate = useNavigate();
+  const { search } = useLocation();
   const revalidator = useRevalidator();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -73,7 +74,7 @@ export default function IncidentNew({ loaderData }: Route.ComponentProps) {
         eventIds: selectedEventIds,
       });
       await revalidator.revalidate();
-      navigate(`/incidents/${response.data.id}`);
+      navigate({ pathname: `/incidents/${response.data.id}`, search });
     } catch (error) {
       setFormError(createErrorMessage(error));
       setIsSubmitting(false);
@@ -137,7 +138,7 @@ export default function IncidentNew({ loaderData }: Route.ComponentProps) {
       </div>
 
       <div className="mt-5 flex justify-end gap-2 border-t border-[#eff2f1] pt-4 max-[680px]:*:flex-1">
-        <Button variant="default" onClick={() => navigate("/incidents")} disabled={isSubmitting}>
+        <Button variant="default" onClick={() => navigate({ pathname: "/incidents", search })} disabled={isSubmitting}>
           Cancel
         </Button>
         <Button type="submit" color="#0f717d" loading={isSubmitting}>

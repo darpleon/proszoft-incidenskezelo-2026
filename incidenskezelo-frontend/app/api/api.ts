@@ -4,6 +4,7 @@ import type { AiModel, IAiAnalysis } from "~/interfaces/IAiAnalysis";
 import type { IEvent } from "~/interfaces/IEvent";
 import type { IHealth } from "~/interfaces/IHealth";
 import type { ICreateIncidentRequest, IIncident, IncidentPriority, IncidentStatus } from "~/interfaces/IIncident";
+import type { IService } from "~/interfaces/IService";
 import type { IAssignableUser, ILoginResponse, IUser, UserRole } from "~/interfaces/IUser";
 
 const Health = {
@@ -24,7 +25,7 @@ const User = {
 };
 
 const Incident = {
-  getAll: () => axiosInstance.get<IIncident[]>(`/incidents`),
+  getAll: (params?: URLSearchParams) => axiosInstance.get<IIncident[]>(`/incidents`, { params }),
   getById: (id: string) => axiosInstance.get<IIncident>(`/incidents/${id}`),
   create: (request: ICreateIncidentRequest) => axiosInstance.post<IIncident>(`/incidents`, request),
   getEvents: (id: string) => axiosInstance.get<IEvent[]>(`/incidents/${id}/events`),
@@ -49,6 +50,10 @@ const Ai = {
     axiosInstance.post<IAiAnalysis>(`/ai/analyze/${incidentId}`, { model }, { timeout: aiRequestTimeoutMs }),
 };
 
-const api = { Health, User, Incident, Event, Ai };
+const Service = {
+  getAll: () => axiosInstance.get<IService[]>(`/services`),
+};
+
+const api = { Health, User, Incident, Event, Service, Ai };
 
 export default api;

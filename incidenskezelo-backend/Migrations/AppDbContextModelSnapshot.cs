@@ -37,11 +37,16 @@ namespace incidenskezelo_backend.Migrations
                     b.Property<int>("IncidentId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("RequestedByUserId")
+                        .HasColumnType("int");
+
                     b.Property<string>("ResultJson")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("AnalysisId");
+
+                    b.HasIndex("RequestedByUserId");
 
                     b.HasIndex("IncidentId", "AnalyzedAtUtc", "AnalysisId");
 
@@ -217,6 +222,37 @@ namespace incidenskezelo_backend.Migrations
                     b.HasIndex("IncidentId", "OccurredAtUtc");
 
                     b.ToTable("IncidentDescriptionChanges");
+                });
+
+            modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Changes.IncidentEventLink", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("ActorUserId")
+                        .HasColumnType("int");
+
+                    b.Property<long>("EventId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("IncidentId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActorUserId");
+
+                    b.HasIndex("EventId");
+
+                    b.HasIndex("IncidentId", "OccurredAtUtc");
+
+                    b.ToTable("IncidentEventLinks");
                 });
 
             modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Changes.IncidentPriorityChange", b =>
@@ -530,6 +566,11 @@ namespace incidenskezelo_backend.Migrations
                         .HasForeignKey("IncidentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("incidenskezelo_backend.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("RequestedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
                 });
 
             modelBuilder.Entity("incidenskezelo_backend.Models.Event", b =>
@@ -609,6 +650,29 @@ namespace incidenskezelo_backend.Migrations
                     b.Navigation("Incident");
                 });
 
+            modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Changes.IncidentEventLink", b =>
+                {
+                    b.HasOne("incidenskezelo_backend.Models.User", "Actor")
+                        .WithMany()
+                        .HasForeignKey("ActorUserId");
+
+                    b.HasOne("incidenskezelo_backend.Models.Event", null)
+                        .WithMany()
+                        .HasForeignKey("EventId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("incidenskezelo_backend.Models.Incident.Incident", "Incident")
+                        .WithMany("EventLinkHistory")
+                        .HasForeignKey("IncidentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Actor");
+
+                    b.Navigation("Incident");
+                });
+
             modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Changes.IncidentPriorityChange", b =>
                 {
                     b.HasOne("incidenskezelo_backend.Models.User", "Actor")
@@ -677,6 +741,8 @@ namespace incidenskezelo_backend.Migrations
                         .IsRequired();
 
                     b.Navigation("DescriptionHistory");
+
+                    b.Navigation("EventLinkHistory");
 
                     b.Navigation("Events");
 

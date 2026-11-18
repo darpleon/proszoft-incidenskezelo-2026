@@ -59,6 +59,9 @@ services:
       - RabbitMQ__HostName=rabbitmq
       - RabbitMQ__UserName=rabbitmq
       - RabbitMQ__Password=${RABBITMQ_PASSWORD}
+      - Gemini__ApiKey=${GEMINI_API_KEY}
+      - LocalAI__ApiKey=${LOCALAI_API_KEY}
+      - LocalAI__BaseUrl=${LOCALAI_URL}
     depends_on:
       db:
         condition: service_healthy

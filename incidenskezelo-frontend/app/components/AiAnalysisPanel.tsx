@@ -2,7 +2,7 @@ import { Loader, Skeleton } from "@mantine/core";
 import { useLocalStorage } from "@mantine/hooks";
 import { IconSparkles } from "@tabler/icons-react";
 import { isAxiosError } from "axios";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AiAnalysisResult } from "./AiAnalysisResult";
 import { AiRunControl, aiModels } from "./AiRunControl";
 import { FormAlert } from "./FormAlert";
@@ -20,7 +20,7 @@ type AiAnalysisPanelProps = {
 type AiRun = {
   analysis: IAiAnalysis;
   finishedAtUtc: string;
-  durationSeconds: number;
+  durationSeconds?: number;
 };
 
 const listFormat = new Intl.ListFormat("en", { type: "disjunction" });
@@ -64,6 +64,25 @@ export function AiAnalysisPanel({ incidentId, events }: AiAnalysisPanelProps) {
   const [lastRun, setLastRun] = useState<AiRun | null>(null);
   const [running, setRunning] = useState<{ model: AiModel; startedAtUtc: string } | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
+  const [loadingSaved, setLoadingSaved] = useState(true);
+
+  useEffect(() => {
+    api.Ai.getLatest(incidentId)
+      .then(({ data }) => {
+        setLastRun({
+          analysis: withDefaults(data),
+          finishedAtUtc: data.analyzedAtUtc,
+        });
+      })
+      .catch((error) => {
+        if (!(isAxiosError(error) && error.response?.status === 404)) {
+          setFailure("The saved analysis could not be loaded. Please try again.");
+        }
+      })
+      .finally(() => {
+        setLoadingSaved(false);
+      });
+  }, [incidentId]);
 
   const run = async () => {
     const startedAt = new Date();
@@ -82,6 +101,15 @@ export function AiAnalysisPanel({ incidentId, events }: AiAnalysisPanelProps) {
     }
     setRunning(null);
   };
+
+  if (loadingSaved) {
+    return (
+      <div className="flex items-center gap-2 py-9 text-sm text-text-2">
+        <Loader size={14} color="#0f717d" />
+        Loading saved analysis…
+      </div>
+    );
+  }
 
   if (!lastRun && !running && !failure) {
     return (
@@ -108,8 +136,9 @@ export function AiAnalysisPanel({ incidentId, events }: AiAnalysisPanelProps) {
           {running && `Started at ${formatTime(running.startedAtUtc)}`}
           {!running && lastRun && (
             <>
-              Analyzed with <b className="font-semibold text-text-2">{lastRun.analysis.model}</b> at {formatTime(lastRun.finishedAtUtc)} · took{" "}
-              {lastRun.durationSeconds} s
+              Analyzed with <b className="font-semibold text-text-2">{lastRun.analysis.model}</b> at{" "}
+                {formatTime(lastRun.finishedAtUtc)}
+                {lastRun.durationSeconds !== undefined && <> · took {lastRun.durationSeconds} s</>}
             </>
           )}
         </span>

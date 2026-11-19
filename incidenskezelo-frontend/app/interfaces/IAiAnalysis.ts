@@ -22,3 +22,7 @@ export interface IAiAnalysis {
   limitations: string[];
   toolCalls: IAiToolCall[];
 }
+
+export interface IStoredAiAnalysis extends IAiAnalysis {
+  analyzedAtUtc: string;
+}

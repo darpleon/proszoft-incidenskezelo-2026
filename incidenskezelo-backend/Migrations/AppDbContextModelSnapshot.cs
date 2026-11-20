@@ -390,6 +390,47 @@ namespace incidenskezelo_backend.Migrations
                     b.ToTable("Incidents");
                 });
 
+            modelBuilder.Entity("incidenskezelo_backend.Models.RejectedEvent", b =>
+                {
+                    b.Property<long>("RejectedEventId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("RejectedEventId"));
+
+                    b.Property<string>("Error")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("RawPayload")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("ReceivedAtUtc")
+                        .HasPrecision(3)
+                        .HasColumnType("datetime2(3)");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("RejectedEventId");
+
+                    b.ToTable("RejectedEvent", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_RejectedEvent_Reason", "[Reason] IN ('Malformed', 'Invalid')");
+
+                            t.HasCheckConstraint("CK_RejectedEvent_Source", "[Source] IN ('Queue', 'Http')");
+                        });
+                });
+
             modelBuilder.Entity("incidenskezelo_backend.Models.Service", b =>
                 {
                     b.Property<int>("ServiceId")

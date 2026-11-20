@@ -12,6 +12,7 @@ export default [
       route(":incidentId", "routes/incident-detail.tsx"),
     ]),
     route("events", "routes/events.tsx"),
+    route("rejected-events", "routes/rejected-events.tsx"),
     route("users", "routes/users.tsx"),
   ]),
 ] satisfies RouteConfig;

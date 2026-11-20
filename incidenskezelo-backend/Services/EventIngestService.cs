@@ -1,7 +1,9 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text;
 using System.Text.Json;
 using incidenskezelo_backend.Configuration;
 using incidenskezelo_backend.Contracts;
+using incidenskezelo_backend.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -16,7 +18,7 @@ public enum EventIngestOutcomeStatus
     TransientFailed,
 }
 
-public record EventIngestOutcome(EventIngestOutcomeStatus Status, EventResponse? Event, string? Error);
+public record EventIngestOutcome(EventIngestOutcomeStatus Status, EventResponse? Event, string? Error, bool Recorded = false);
 
 public class EventIngestService
 {
@@ -41,6 +43,55 @@ public class EventIngestService
     }
 
     public async Task<EventIngestOutcome> IngestAsync(
+        ReadOnlyMemory<byte> body,
+        RejectedEventSource source,
+        CancellationToken cancellationToken)
+    {
+        var outcome = await ProcessAsync(body, cancellationToken);
+
+        if (outcome.Status is EventIngestOutcomeStatus.Malformed or EventIngestOutcomeStatus.Invalid)
+        {
+            var recorded = await TryRecordRejectedAsync(body, source, outcome, cancellationToken);
+            return outcome with { Recorded = recorded };
+        }
+
+        return outcome;
+    }
+
+
+    private async Task<bool> TryRecordRejectedAsync(
+        ReadOnlyMemory<byte> body,
+        RejectedEventSource source,
+        EventIngestOutcome outcome,
+        CancellationToken cancellationToken)
+    {
+        var reason = outcome.Status == EventIngestOutcomeStatus.Malformed
+            ? RejectedEventReason.Malformed
+            : RejectedEventReason.Invalid;
+
+        try
+        {
+            await using var scope = _scopeFactory.CreateAsyncScope();
+            var rejectedEventService = scope.ServiceProvider.GetRequiredService<RejectedEventService>();
+
+            await rejectedEventService.RecordAsync(
+                source,
+                reason,
+                outcome.Error ?? string.Empty,
+                Encoding.UTF8.GetString(body.Span),
+                cancellationToken);
+
+            return true;
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _logger.LogError(exception, "Rejected event could not be recorded.");
+            return false;
+        }
+    }
+
+
+    private async Task<EventIngestOutcome> ProcessAsync(
         ReadOnlyMemory<byte> body,
         CancellationToken cancellationToken)
     {

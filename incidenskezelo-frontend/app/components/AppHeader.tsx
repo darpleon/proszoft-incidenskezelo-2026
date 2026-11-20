@@ -8,6 +8,7 @@ import { getInitials } from "~/lib/initials";
 const navItems = [
   { to: "/incidents", label: "Incidents" },
   { to: "/events", label: "Events" },
+  { to: "/rejected-events", label: "Rejected" },
 ];
 
 export function AppHeader() {

@@ -25,4 +25,16 @@ public static class IncidentValidator
             ? $"Description must be at most {IncidentLimits.DescriptionMaxLength} characters."
             : null;
     }
+
+    public static string? CommentError(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return "Comment is required.";
+        }
+
+        return text.Length > IncidentLimits.CommentMaxLength
+            ? $"Comment must be at most {IncidentLimits.CommentMaxLength} characters."
+            : null;
+    }
 }

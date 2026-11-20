@@ -390,6 +390,37 @@ namespace incidenskezelo_backend.Migrations
                     b.ToTable("Incidents");
                 });
 
+            modelBuilder.Entity("incidenskezelo_backend.Models.Incident.IncidentComment", b =>
+                {
+                    b.Property<int>("CommentId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CommentId"));
+
+                    b.Property<int?>("AuthorUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("IncidentId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.HasKey("CommentId");
+
+                    b.HasIndex("AuthorUserId");
+
+                    b.HasIndex("IncidentId", "OccurredAtUtc");
+
+                    b.ToTable("IncidentComments");
+                });
+
             modelBuilder.Entity("incidenskezelo_backend.Models.Service", b =>
                 {
                     b.Property<int>("ServiceId")
@@ -667,6 +698,24 @@ namespace incidenskezelo_backend.Migrations
                         .HasForeignKey("AssigneeUserId");
 
                     b.Navigation("Assignee");
+                });
+
+            modelBuilder.Entity("incidenskezelo_backend.Models.Incident.IncidentComment", b =>
+                {
+                    b.HasOne("incidenskezelo_backend.Models.User", "Author")
+                        .WithMany()
+                        .HasForeignKey("AuthorUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("incidenskezelo_backend.Models.Incident.Incident", "Incident")
+                        .WithMany()
+                        .HasForeignKey("IncidentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Author");
+
+                    b.Navigation("Incident");
                 });
 
             modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Incident", b =>

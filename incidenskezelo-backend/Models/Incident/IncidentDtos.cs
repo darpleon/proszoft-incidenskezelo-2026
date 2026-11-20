@@ -36,6 +36,8 @@ public record UpdatePriorityRequest(IncidentPriority Priority, int? ExpectedRevi
 
 public record UpdateAssigneeRequest(int? AssigneeUserId, int? ExpectedRevision);
 
+public record CreateCommentRequest(string Text);
+
 public record IncidentRevisions(int Title, int Description, int Priority, int Status, int Assignee)
 {
     public static IncidentRevisions From(Incident incident) =>
@@ -100,6 +102,8 @@ public record IncidentChangeResponse(
     string? NewValue,
     int? ActorUserId,
     string? ActorName);
+
+public record IncidentCommentResponse(DateTime OccurredAtUtc, string Text, int? AuthorUserId);
 
 public record PreviousIncidentSearchResult(
     Guid Id,

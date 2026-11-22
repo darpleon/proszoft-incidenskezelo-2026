@@ -2,6 +2,7 @@ using incidenskezelo_backend.Models;
 using incidenskezelo_backend.Models.AI;
 using incidenskezelo_backend.Models.Incident;
 using incidenskezelo_backend.Models.Incident.Changes;
+using incidenskezelo_backend.Models.Incident.Comments;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -29,6 +30,12 @@ namespace incidenskezelo_backend.Data
         public DbSet<IncidentPriorityChange> IncidentPriorityChanges => Set<IncidentPriorityChange>();
 
         public DbSet<IncidentAssigneeChange> IncidentAssigneeChanges => Set<IncidentAssigneeChange>();
+
+        public DbSet<IncidentComment> IncidentComments => Set<IncidentComment>();
+
+        public DbSet<IncidentCommentCreation> IncidentCommentCreations => Set<IncidentCommentCreation>();
+
+        public DbSet<IncidentCommentBodyChange> IncidentCommentBodyChanges => Set<IncidentCommentBodyChange>();
         public DbSet<StoredIncidentAnalysis> StoredIncidentAnalyses =>
             Set<StoredIncidentAnalysis>();
 
@@ -194,6 +201,47 @@ namespace incidenskezelo_backend.Data
             assigneeChange.HasIndex(c => new { c.IncidentId, c.OccurredAtUtc });
             assigneeChange.HasOne<User>().WithMany().HasForeignKey(c => c.OldValue).OnDelete(DeleteBehavior.NoAction);
             assigneeChange.HasOne<User>().WithMany().HasForeignKey(c => c.NewValue).OnDelete(DeleteBehavior.NoAction);
+
+            var comment = modelBuilder.Entity<IncidentComment>();
+
+            comment.HasKey(c => c.CommentId);
+            comment.HasIndex(c => new { c.IncidentId, c.CommentIndex }).IsUnique();
+            comment.Property(c => c.Body).HasMaxLength(IncidentLimits.CommentMaxLength);
+
+            comment.HasOne(c => c.Incident)
+                .WithMany()
+                .HasForeignKey(c => c.IncidentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            comment.HasOne(c => c.Creation)
+                .WithOne(creation => creation.Comment)
+                .HasForeignKey<IncidentCommentCreation>(creation => creation.CommentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            comment.HasMany(c => c.BodyHistory)
+                .WithOne(change => change.Comment)
+                .HasForeignKey(change => change.CommentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            var commentCreation = modelBuilder.Entity<IncidentCommentCreation>();
+
+            commentCreation.HasKey(creation => creation.CreationId);
+            commentCreation.HasIndex(creation => creation.CommentId).IsUnique();
+            commentCreation.HasOne(creation => creation.Actor)
+                .WithMany()
+                .HasForeignKey(creation => creation.ActorUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            var commentBodyChange = modelBuilder.Entity<IncidentCommentBodyChange>();
+
+            commentBodyChange.HasKey(change => change.ChangeId);
+            commentBodyChange.HasIndex(change => new { change.CommentId, change.OccurredAtUtc });
+            commentBodyChange.Property(change => change.OldBody).HasMaxLength(IncidentLimits.CommentMaxLength);
+            commentBodyChange.Property(change => change.NewBody).HasMaxLength(IncidentLimits.CommentMaxLength);
+            commentBodyChange.HasOne(change => change.Actor)
+                .WithMany()
+                .HasForeignKey(change => change.ActorUserId)
+                .OnDelete(DeleteBehavior.NoAction);
         }
 
         private sealed class AsUtcConverter() : ValueConverter<DateTime, DateTime>(

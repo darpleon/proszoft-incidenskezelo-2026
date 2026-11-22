@@ -327,6 +327,99 @@ namespace incidenskezelo_backend.Migrations
                     b.ToTable("IncidentTitleChanges");
                 });
 
+            modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Comments.IncidentComment", b =>
+                {
+                    b.Property<int>("CommentId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CommentId"));
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int>("BodyRevision")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CommentIndex")
+                        .HasColumnType("int");
+
+                    b.Property<int>("IncidentId")
+                        .HasColumnType("int");
+
+                    b.HasKey("CommentId");
+
+                    b.HasIndex("IncidentId", "CommentIndex")
+                        .IsUnique();
+
+                    b.ToTable("IncidentComments");
+                });
+
+            modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Comments.IncidentCommentBodyChange", b =>
+                {
+                    b.Property<int>("ChangeId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ChangeId"));
+
+                    b.Property<int?>("ActorUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CommentId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("NewBody")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("OldBody")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.HasKey("ChangeId");
+
+                    b.HasIndex("ActorUserId");
+
+                    b.HasIndex("CommentId", "OccurredAtUtc");
+
+                    b.ToTable("IncidentCommentBodyChanges");
+                });
+
+            modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Comments.IncidentCommentCreation", b =>
+                {
+                    b.Property<int>("CreationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CreationId"));
+
+                    b.Property<int?>("ActorUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CommentId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("OccurredAtUtc")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("CreationId");
+
+                    b.HasIndex("ActorUserId");
+
+                    b.HasIndex("CommentId")
+                        .IsUnique();
+
+                    b.ToTable("IncidentCommentCreations");
+                });
+
             modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Incident", b =>
                 {
                     b.Property<int>("IncidentId")
@@ -660,6 +753,53 @@ namespace incidenskezelo_backend.Migrations
                     b.Navigation("Incident");
                 });
 
+            modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Comments.IncidentComment", b =>
+                {
+                    b.HasOne("incidenskezelo_backend.Models.Incident.Incident", "Incident")
+                        .WithMany()
+                        .HasForeignKey("IncidentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Incident");
+                });
+
+            modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Comments.IncidentCommentBodyChange", b =>
+                {
+                    b.HasOne("incidenskezelo_backend.Models.User", "Actor")
+                        .WithMany()
+                        .HasForeignKey("ActorUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("incidenskezelo_backend.Models.Incident.Comments.IncidentComment", "Comment")
+                        .WithMany("BodyHistory")
+                        .HasForeignKey("CommentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Actor");
+
+                    b.Navigation("Comment");
+                });
+
+            modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Comments.IncidentCommentCreation", b =>
+                {
+                    b.HasOne("incidenskezelo_backend.Models.User", "Actor")
+                        .WithMany()
+                        .HasForeignKey("ActorUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("incidenskezelo_backend.Models.Incident.Comments.IncidentComment", "Comment")
+                        .WithOne("Creation")
+                        .HasForeignKey("incidenskezelo_backend.Models.Incident.Comments.IncidentCommentCreation", "CommentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Actor");
+
+                    b.Navigation("Comment");
+                });
+
             modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Incident", b =>
                 {
                     b.HasOne("incidenskezelo_backend.Models.User", "Assignee")
@@ -667,6 +807,14 @@ namespace incidenskezelo_backend.Migrations
                         .HasForeignKey("AssigneeUserId");
 
                     b.Navigation("Assignee");
+                });
+
+            modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Comments.IncidentComment", b =>
+                {
+                    b.Navigation("BodyHistory");
+
+                    b.Navigation("Creation")
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("incidenskezelo_backend.Models.Incident.Incident", b =>

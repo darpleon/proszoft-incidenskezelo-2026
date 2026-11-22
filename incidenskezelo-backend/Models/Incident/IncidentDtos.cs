@@ -1,4 +1,5 @@
 using incidenskezelo_backend.Models.Incident.Changes;
+using incidenskezelo_backend.Models.Incident.Comments;
 
 namespace incidenskezelo_backend.Models.Incident;
 
@@ -27,6 +28,10 @@ public record IncidentQuery
 }
 
 public record TransitionRequest(IncidentStatus Status, int? ExpectedRevision);
+
+public record CreateCommentRequest(string Body);
+
+public record UpdateCommentRequest(string Body, int? ExpectedRevision);
 
 public record UpdateTitleRequest(string Title, int? ExpectedRevision);
 
@@ -100,6 +105,28 @@ public record IncidentChangeResponse(
     string? NewValue,
     int? ActorUserId,
     string? ActorName);
+
+public record IncidentCommentResponse(
+    int CommentIndex,
+    string Body,
+    DateTime CreatedAtUtc,
+    int? ActorUserId,
+    string? ActorName,
+    DateTime? EditedAtUtc,
+    int BodyRevision)
+{
+    public static IncidentCommentResponse From(IncidentComment comment)
+    {
+        return new IncidentCommentResponse(
+            comment.CommentIndex,
+            comment.Body,
+            comment.Creation.OccurredAtUtc,
+            comment.Creation.ActorUserId,
+            comment.Creation.Actor?.Name,
+            comment.BodyHistory.Count == 0 ? null : comment.BodyHistory.Max(change => change.OccurredAtUtc),
+            comment.BodyRevision);
+    }
+}
 
 public record PreviousIncidentSearchResult(
     Guid Id,

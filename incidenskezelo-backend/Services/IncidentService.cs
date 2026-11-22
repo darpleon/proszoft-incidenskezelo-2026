@@ -512,10 +512,7 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
 
     public async Task<List<IncidentChangeResponse>?> GetHistoryAsync(Guid id, CancellationToken ct)
     {
-        var incidentId = await context.Incidents.AsNoTracking()
-            .Where(i => i.PublicId == id)
-            .Select(i => (int?)i.IncidentId)
-            .FirstOrDefaultAsync(ct);
+        var incidentId = await FindIncidentIdAsync(id, ct);
 
         if (incidentId is null)
         {
@@ -524,7 +521,21 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
 
         var created = await context.IncidentCreations.AsNoTracking()
             .Where(c => c.IncidentId == incidentId)
-            .Select(c => new IncidentChangeResponse("created", c.OccurredAtUtc, null, null, c.ActorUserId, c.Actor != null ? c.Actor.Name : null))
+            .Select(c => new IncidentChangeResponse("created", c.OccurredAtUtc, null, null, c.ActorUserId, c.Actor != null ? c.Actor.Name : null, null))
+            .ToListAsync(ct);
+
+        var comments = await context.IncidentCommentCreations.AsNoTracking()
+            .Where(c => c.Comment.IncidentId == incidentId)
+            .OrderBy(c => c.OccurredAtUtc)
+            .ThenBy(c => c.Comment.CommentIndex)
+            .Select(c => new IncidentChangeResponse("comment", c.OccurredAtUtc, null, null, c.ActorUserId, c.Actor != null ? c.Actor.Name : null, c.Comment.CommentIndex))
+            .ToListAsync(ct);
+
+        var commentEdits = await context.IncidentCommentBodyChanges.AsNoTracking()
+            .Where(c => c.Comment.IncidentId == incidentId)
+            .OrderBy(c => c.OccurredAtUtc)
+            .ThenBy(c => c.Comment.CommentIndex)
+            .Select(c => new IncidentChangeResponse("comment", c.OccurredAtUtc, c.OldBody, c.NewBody, c.ActorUserId, c.Actor != null ? c.Actor.Name : null, c.Comment.CommentIndex))
             .ToListAsync(ct);
 
         var status = await MapKindAsync(context.IncidentStatusChanges.AsNoTracking().Where(c => c.IncidentId == incidentId), "status", ct);
@@ -539,10 +550,13 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
                 context.Users.Where(user => user.UserId == c.OldValue).Select(user => user.Name).FirstOrDefault(),
                 context.Users.Where(user => user.UserId == c.NewValue).Select(user => user.Name).FirstOrDefault(),
                 c.ActorUserId,
-                c.Actor != null ? c.Actor.Name : null))
+                c.Actor != null ? c.Actor.Name : null,
+                null))
             .ToListAsync(ct);
 
         return created
+            .Concat(comments)
+            .Concat(commentEdits)
             .Concat(status)
             .Concat(title)
             .Concat(description)
@@ -562,7 +576,7 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
             .ToListAsync(ct);
 
         return rows
-            .Select(r => new IncidentChangeResponse(kind, r.OccurredAtUtc, r.OldValue?.ToString(), r.NewValue?.ToString(), r.ActorUserId, r.ActorName))
+            .Select(r => new IncidentChangeResponse(kind, r.OccurredAtUtc, r.OldValue?.ToString(), r.NewValue?.ToString(), r.ActorUserId, r.ActorName, null))
             .ToList();
     }
 }

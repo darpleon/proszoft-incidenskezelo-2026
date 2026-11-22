@@ -104,7 +104,8 @@ public record IncidentChangeResponse(
     string? OldValue,
     string? NewValue,
     int? ActorUserId,
-    string? ActorName);
+    string? ActorName,
+    int? CommentIndex);
 
 public record IncidentCommentResponse(
     int CommentIndex,

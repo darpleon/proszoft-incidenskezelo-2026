@@ -3,6 +3,7 @@ import { aiRequestTimeoutMs } from "~/constants/constants";
 import type { AiModel, IAiAnalysis, IStoredAiAnalysis } from "~/interfaces/IAiAnalysis";
 import type { IEvent } from "~/interfaces/IEvent";
 import type { IHealth } from "~/interfaces/IHealth";
+import type { IComment } from "~/interfaces/IComment";
 import type { ICreateIncidentRequest, IIncident, IncidentPriority, IncidentStatus } from "~/interfaces/IIncident";
 import type { IService } from "~/interfaces/IService";
 import type { IAssignableUser, ILoginResponse, IUser, UserRole } from "~/interfaces/IUser";
@@ -39,6 +40,10 @@ const Incident = {
     axiosInstance.patch<IIncident>(`/incidents/${id}/priority`, { priority, expectedRevision }),
   updateAssignee: (id: string, assigneeUserId: number | null, expectedRevision: number) =>
     axiosInstance.patch<IIncident>(`/incidents/${id}/assignee`, { assigneeUserId, expectedRevision }),
+  getComments: (id: string) => axiosInstance.get<IComment[]>(`/incidents/${id}/comments`),
+  addComment: (id: string, body: string) => axiosInstance.post<IComment>(`/incidents/${id}/comments`, { body }),
+  updateComment: (id: string, commentIndex: number, body: string, expectedRevision: number) =>
+    axiosInstance.patch<IComment>(`/incidents/${id}/comments/${commentIndex}`, { body, expectedRevision }),
 };
 
 const Event = {

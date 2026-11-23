@@ -29,18 +29,26 @@ function TabCount({ count }: { count: number }) {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   try {
-    const [incident, assignableUsers, events] = await Promise.all([
+    const [incident, assignableUsers, events, comments] = await Promise.all([
       api.Incident.getById(params.incidentId),
       api.User.getAssignable(),
       api.Incident.getEvents(params.incidentId),
+      api.Incident.getComments(params.incidentId),
     ]);
-    return { incident: incident.data, assignableUsers: assignableUsers.data, events: events.data, loadError: null };
+    return {
+      incident: incident.data,
+      assignableUsers: assignableUsers.data,
+      events: events.data,
+      comments: comments.data,
+      loadError: null,
+    };
   } catch (error) {
     const isMissing = isAxiosError(error) && (error.response?.status === 404 || error.response?.status === 400);
     return {
       incident: null,
       assignableUsers: [] as IAssignableUser[],
       events: [] as IEvent[],
+      comments: [] as IComment[],
       loadError: isMissing ? "Incident not found." : "The incident could not be loaded.",
     };
   }
@@ -48,30 +56,31 @@ export async function clientLoader({ params }: Route.ClientLoaderArgs) {
 
 function changeErrorMessage(error: unknown) {
   if (isAxiosError(error) && error.response?.status === 409) {
-    return error.response.data?.title === "Revision conflict"
-      ? "Someone else changed this incident. The page has been refreshed."
-      : "This status change is not allowed.";
+    if (error.response.data?.title === "Revision conflict") {
+      return typeof error.response.data?.commentIndex === "number"
+        ? "Someone else edited this comment. The list has been refreshed."
+        : "Someone else changed this incident. The page has been refreshed.";
+    }
+    return "This status change is not allowed.";
   }
   if (isAxiosError(error) && error.response?.status === 400 && typeof error.response.data?.detail === "string") {
+    return error.response.data.detail;
+  }
+  if (isAxiosError(error) && error.response?.status === 403 && typeof error.response.data?.detail === "string") {
     return error.response.data.detail;
   }
   return "The change could not be saved. Please try again.";
 }
 
 export default function IncidentDetail({ loaderData }: Route.ComponentProps) {
-  const { incident, assignableUsers, events, loadError } = loaderData;
+  const { incident, assignableUsers, events, comments, loadError } = loaderData;
   const { user } = useAuth();
   const revalidator = useRevalidator();
-  const [allComments, setAllComments] = useState<IComment[]>([]);
   const [changeError, setChangeError] = useState<{ incidentId: string; message: string } | null>(null);
 
   if (!incident) {
     return <EmptyState>{loadError}</EmptyState>;
   }
-
-  const incidentComments = allComments
-    .filter((comment) => comment.incidentId === incident.id)
-    .sort((a, b) => a.createdAtUtc.localeCompare(b.createdAtUtc));
 
   const saveChange = async (request: () => Promise<unknown>) => {
     setChangeError(null);
@@ -104,27 +113,10 @@ export default function IncidentDetail({ loaderData }: Route.ComponentProps) {
     saveChange(() => api.Incident.updateAssignee(incident.id, assigneeUserId, incident.revisions.assignee));
   };
 
-  const addComment = (body: string) => {
-    if (!user) return;
+  const addComment = (body: string) => saveChange(() => api.Incident.addComment(incident.id, body));
 
-    const newComment: IComment = {
-      commentId: Date.now(),
-      incidentId: incident.id,
-      authorUserId: user.userId,
-      authorName: user.name,
-      body,
-      createdAtUtc: new Date().toISOString(),
-      editedAtUtc: null,
-    };
-    setAllComments((current) => [...current, newComment]);
-  };
-
-  const editComment = (commentId: number, body: string) => {
-    const editedAtUtc = new Date().toISOString();
-    setAllComments((current) =>
-      current.map((comment) => (comment.commentId === commentId ? { ...comment, body, editedAtUtc } : comment)),
-    );
-  };
+  const editComment = (comment: IComment, body: string) =>
+    saveChange(() => api.Incident.updateComment(incident.id, comment.commentIndex, body, comment.bodyRevision));
 
   return (
     <>
@@ -151,7 +143,7 @@ export default function IncidentDetail({ loaderData }: Route.ComponentProps) {
           <Tabs.Tab value="events" leftSection={<IconTimelineEvent size={14} />} rightSection={<TabCount count={events.length} />}>
             Events
           </Tabs.Tab>
-          <Tabs.Tab value="comments" leftSection={<IconMessage size={14} />} rightSection={<TabCount count={incidentComments.length} />}>
+          <Tabs.Tab value="comments" leftSection={<IconMessage size={14} />} rightSection={<TabCount count={comments.length} />}>
             Comments
           </Tabs.Tab>
           <Tabs.Tab value="ai" leftSection={<IconSparkles size={14} />}>
@@ -167,7 +159,7 @@ export default function IncidentDetail({ loaderData }: Route.ComponentProps) {
             {events.length > 0 ? <EventsTable events={events} /> : <EmptyState>No linked events yet.</EmptyState>}
           </Tabs.Panel>
           <Tabs.Panel value="comments">
-            <CommentList comments={incidentComments} currentUserId={user?.userId} onEdit={editComment} />
+            <CommentList comments={comments} currentUserId={user?.userId} onEdit={editComment} />
             <div className="mt-4 border-t border-line pt-4">
               <CommentForm onSubmit={addComment} />
             </div>

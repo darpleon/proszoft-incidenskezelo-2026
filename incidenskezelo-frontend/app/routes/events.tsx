@@ -4,6 +4,7 @@ import { Link } from "react-router";
 import api from "~/api/api";
 import { EmptyState } from "~/components/EmptyState";
 import { EventsTable } from "~/components/EventsTable";
+import { rejectedEventsLimit } from "~/constants/constants";
 import type { IEvent } from "~/interfaces/IEvent";
 import type { Route } from "./+types/events";
 
@@ -56,7 +57,9 @@ export default function Events({ loaderData }: Route.ComponentProps) {
         <p className="text-[11.5px] text-text-3">Latest {events.length} events</p>
         {rejectedCount > 0 && (
           <Link to="/rejected-events" className="text-[12.5px] text-crit hover:underline">
-            {rejectedCount === 1 ? "1 rejected event" : `${rejectedCount} rejected events`}
+            {rejectedCount === 1
+              ? "1 rejected event"
+              : `${rejectedCount}${rejectedCount >= rejectedEventsLimit ? "+" : ""} rejected events`}
           </Link>
         )}
         <TextInput

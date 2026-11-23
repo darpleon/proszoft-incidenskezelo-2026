@@ -9,14 +9,14 @@ import { formatAge } from "~/lib/format";
 type CommentListProps = {
   comments: IComment[];
   currentUserId: number | undefined;
-  onEdit: (commentId: number, body: string) => void;
+  onEdit: (comment: IComment, body: string) => void;
 };
 
 export function CommentList({ comments, currentUserId, onEdit }: CommentListProps) {
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
 
-  const saveEdit = (commentId: number, body: string) => {
-    onEdit(commentId, body);
+  const saveEdit = (comment: IComment, body: string) => {
+    onEdit(comment, body);
     setEditingCommentId(null);
   };
 
@@ -32,16 +32,16 @@ export function CommentList({ comments, currentUserId, onEdit }: CommentListProp
   return (
     <ul>
       {comments.map((comment) => {
-        const isOwn = comment.authorUserId === currentUserId;
-        const isEditing = comment.commentId === editingCommentId;
+        const isOwn = comment.actorUserId === currentUserId;
+        const isEditing = comment.commentIndex === editingCommentId;
 
         return (
-          <li key={comment.commentId} className="flex gap-3 border-t border-[#eff2f1] py-3.5 first:border-t-0 first:pt-0">
-            <UserAvatar name={comment.authorName} size="md" />
+          <li key={comment.commentIndex} className="flex gap-3 border-t border-[#eff2f1] py-3.5 first:border-t-0 first:pt-0">
+            <UserAvatar name={comment.actorName} size="md" />
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-baseline gap-2">
                 <span className="text-sm font-semibold">
-                  {comment.authorName}
+                  {comment.actorName}
                   {isOwn && <span className="font-normal text-text-3"> (you)</span>}
                 </span>
                 <span className="text-[11.5px] text-text-3" suppressHydrationWarning>
@@ -56,7 +56,7 @@ export function CommentList({ comments, currentUserId, onEdit }: CommentListProp
                     className="ml-auto self-center"
                     aria-label="Edit comment"
                     title="Edit comment"
-                    onClick={() => setEditingCommentId(comment.commentId)}
+                    onClick={() => setEditingCommentId(comment.commentIndex)}
                   >
                     <IconPencil size={14} />
                   </ActionIcon>
@@ -67,7 +67,7 @@ export function CommentList({ comments, currentUserId, onEdit }: CommentListProp
                   <CommentForm
                     initialBody={comment.body}
                     submitLabel="Save"
-                    onSubmit={(body) => saveEdit(comment.commentId, body)}
+                    onSubmit={(body) => saveEdit(comment, body)}
                     onCancel={() => setEditingCommentId(null)}
                   />
                 </div>

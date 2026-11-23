@@ -2,6 +2,8 @@ using incidenskezelo_backend.Data;
 using incidenskezelo_backend.Models;
 using incidenskezelo_backend.Models.Incident;
 using incidenskezelo_backend.Models.Incident.Changes;
+using incidenskezelo_backend.Models.Incident.Comments;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 using System.Text.RegularExpressions;
@@ -307,6 +309,138 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
         }, ct);
     }
 
+    public async Task<IncidentCommentResponse?> AddCommentAsync(Guid id, string body, int actorUserId, CancellationToken ct)
+    {
+        var incident = await context.Incidents.FirstOrDefaultAsync(i => i.PublicId == id, ct);
+
+        if (incident is null)
+        {
+            return null;
+        }
+
+        var comment = await AllocateCommentAsync(incident, body, actorUserId, ct);
+
+        await context.Entry(comment.Creation).Reference(creation => creation.Actor).LoadAsync(ct);
+        return IncidentCommentResponse.From(comment);
+    }
+
+    public async Task<List<IncidentCommentResponse>?> GetCommentsAsync(Guid id, CancellationToken ct)
+    {
+        var incidentId = await FindIncidentIdAsync(id, ct);
+
+        if (incidentId is null)
+        {
+            return null;
+        }
+
+        return await context.IncidentComments.AsNoTracking()
+            .Where(c => c.IncidentId == incidentId)
+            .OrderBy(c => c.CommentIndex)
+            .Include(c => c.Creation)
+                .ThenInclude(creation => creation.Actor!)
+            .Include(c => c.BodyHistory)
+            .Select(c => IncidentCommentResponse.From(c))
+            .ToListAsync(ct);
+    }
+
+    public async Task<IncidentCommentResponse?> GetCommentAsync(Guid id, int commentIndex, CancellationToken ct)
+    {
+        var comment = await FindCommentAsync(id, commentIndex, ct);
+
+        return comment is null ? null : IncidentCommentResponse.From(comment);
+    }
+
+    public async Task<IncidentCommentResponse?> UpdateCommentBodyAsync(Guid id, int commentIndex, string body, int expectedRevision, int actorUserId, CancellationToken ct)
+    {
+        var comment = await context.IncidentComments
+            .Include(c => c.Creation)
+                .ThenInclude(creation => creation.Actor!)
+            .Include(c => c.BodyHistory)
+            .FirstOrDefaultAsync(c => c.Incident.PublicId == id && c.CommentIndex == commentIndex, ct);
+
+        if (comment is null)
+        {
+            return null;
+        }
+
+        DemandCreator(comment, actorUserId);
+        DemandBodyRevision(comment, expectedRevision);
+
+        if (comment.UpdateBody(body, NewContext(actorUserId)))
+        {
+            await context.SaveChangesAsync(ct);
+        }
+
+        return IncidentCommentResponse.From(comment);
+    }
+
+    private async Task<IncidentComment> AllocateCommentAsync(Incident incident, string body, int actorUserId, CancellationToken ct)
+    {
+        while (true)
+        {
+            var comment = new IncidentComment(incident, await NextCommentIndexAsync(incident.IncidentId, ct), body, NewContext(actorUserId));
+            context.IncidentComments.Add(comment);
+
+            try
+            {
+                await context.SaveChangesAsync(ct);
+                return comment;
+            }
+            catch (DbUpdateException ex) when (IsDuplicateIndexViolation(ex))
+            {
+                context.IncidentComments.Remove(comment);
+            }
+        }
+    }
+
+    private async Task<int> NextCommentIndexAsync(int incidentId, CancellationToken ct)
+    {
+        var max = await context.IncidentComments
+            .Where(c => c.IncidentId == incidentId)
+            .MaxAsync(c => (int?)c.CommentIndex, ct);
+
+        return max + 1 ?? 1;
+    }
+
+    private async Task<IncidentComment?> FindCommentAsync(Guid id, int commentIndex, CancellationToken ct)
+    {
+        return await context.IncidentComments
+            .AsNoTracking()
+            .Include(c => c.Creation)
+                .ThenInclude(creation => creation.Actor!)
+            .Include(c => c.BodyHistory)
+            .FirstOrDefaultAsync(c => c.Incident.PublicId == id && c.CommentIndex == commentIndex, ct);
+    }
+
+    private async Task<int?> FindIncidentIdAsync(Guid id, CancellationToken ct)
+    {
+        return await context.Incidents.AsNoTracking()
+            .Where(i => i.PublicId == id)
+            .Select(i => (int?)i.IncidentId)
+            .FirstOrDefaultAsync(ct);
+    }
+
+    private static void DemandCreator(IncidentComment comment, int actorUserId)
+    {
+        if (comment.Creation.ActorUserId != actorUserId)
+        {
+            throw new CommentCreatorOnlyException(comment.CommentIndex);
+        }
+    }
+
+    private static void DemandBodyRevision(IncidentComment comment, int expectedRevision)
+    {
+        if (expectedRevision != comment.BodyRevision)
+        {
+            throw new CommentRevisionConflictException(comment.CommentIndex, comment.BodyRevision, comment.Body);
+        }
+    }
+
+    private static bool IsDuplicateIndexViolation(DbUpdateException exception)
+    {
+        return exception.InnerException is SqlException { Number: 2601 or 2627 };
+    }
+
     private async Task<IncidentResponse?> ApplyAsync(Guid id, int actorUserId, Action<Incident, ChangeContext> update, CancellationToken ct)
     {
         var incident = await LoadWithHistoryAsync(id, ct);
@@ -378,10 +512,7 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
 
     public async Task<List<IncidentChangeResponse>?> GetHistoryAsync(Guid id, CancellationToken ct)
     {
-        var incidentId = await context.Incidents.AsNoTracking()
-            .Where(i => i.PublicId == id)
-            .Select(i => (int?)i.IncidentId)
-            .FirstOrDefaultAsync(ct);
+        var incidentId = await FindIncidentIdAsync(id, ct);
 
         if (incidentId is null)
         {
@@ -390,7 +521,21 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
 
         var created = await context.IncidentCreations.AsNoTracking()
             .Where(c => c.IncidentId == incidentId)
-            .Select(c => new IncidentChangeResponse("created", c.OccurredAtUtc, null, null, c.ActorUserId, c.Actor != null ? c.Actor.Name : null))
+            .Select(c => new IncidentChangeResponse("created", c.OccurredAtUtc, null, null, c.ActorUserId, c.Actor != null ? c.Actor.Name : null, null))
+            .ToListAsync(ct);
+
+        var comments = await context.IncidentCommentCreations.AsNoTracking()
+            .Where(c => c.Comment.IncidentId == incidentId)
+            .OrderBy(c => c.OccurredAtUtc)
+            .ThenBy(c => c.Comment.CommentIndex)
+            .Select(c => new IncidentChangeResponse("comment", c.OccurredAtUtc, null, null, c.ActorUserId, c.Actor != null ? c.Actor.Name : null, c.Comment.CommentIndex))
+            .ToListAsync(ct);
+
+        var commentEdits = await context.IncidentCommentBodyChanges.AsNoTracking()
+            .Where(c => c.Comment.IncidentId == incidentId)
+            .OrderBy(c => c.OccurredAtUtc)
+            .ThenBy(c => c.Comment.CommentIndex)
+            .Select(c => new IncidentChangeResponse("comment", c.OccurredAtUtc, c.OldBody, c.NewBody, c.ActorUserId, c.Actor != null ? c.Actor.Name : null, c.Comment.CommentIndex))
             .ToListAsync(ct);
 
         var status = await MapKindAsync(context.IncidentStatusChanges.AsNoTracking().Where(c => c.IncidentId == incidentId), "status", ct);
@@ -405,10 +550,13 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
                 context.Users.Where(user => user.UserId == c.OldValue).Select(user => user.Name).FirstOrDefault(),
                 context.Users.Where(user => user.UserId == c.NewValue).Select(user => user.Name).FirstOrDefault(),
                 c.ActorUserId,
-                c.Actor != null ? c.Actor.Name : null))
+                c.Actor != null ? c.Actor.Name : null,
+                null))
             .ToListAsync(ct);
 
         return created
+            .Concat(comments)
+            .Concat(commentEdits)
             .Concat(status)
             .Concat(title)
             .Concat(description)
@@ -428,7 +576,7 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
             .ToListAsync(ct);
 
         return rows
-            .Select(r => new IncidentChangeResponse(kind, r.OccurredAtUtc, r.OldValue?.ToString(), r.NewValue?.ToString(), r.ActorUserId, r.ActorName))
+            .Select(r => new IncidentChangeResponse(kind, r.OccurredAtUtc, r.OldValue?.ToString(), r.NewValue?.ToString(), r.ActorUserId, r.ActorName, null))
             .ToList();
     }
 }

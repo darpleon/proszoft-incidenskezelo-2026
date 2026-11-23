@@ -209,6 +209,74 @@ public class IncidentsController(IIncidentService incidentService, EventService 
         }
     }
 
+    [HttpGet("{id}/comments")]
+    [ProducesResponseType(typeof(List<IncidentCommentResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<List<IncidentCommentResponse>>> GetComments(Guid id, CancellationToken ct)
+    {
+        var comments = await incidentService.GetCommentsAsync(id, ct);
+        return comments is null ? Missing(id) : comments;
+    }
+
+    [HttpGet("{id}/comments/{commentIndex}")]
+    [ProducesResponseType(typeof(IncidentCommentResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IncidentCommentResponse>> GetComment(Guid id, int commentIndex, CancellationToken ct)
+    {
+        var comment = await incidentService.GetCommentAsync(id, commentIndex, ct);
+        return comment is null ? MissingComment(id, commentIndex) : comment;
+    }
+
+    [HttpPost("{id}/comments")]
+    [ProducesResponseType(typeof(IncidentCommentResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IncidentCommentResponse>> AddComment(Guid id, CreateCommentRequest request, CancellationToken ct)
+    {
+        if (IncidentValidator.CommentError(request.Body) is { } error)
+        {
+            return Invalid([error]);
+        }
+
+        var comment = await incidentService.AddCommentAsync(id, request.Body, CurrentUserId(), ct);
+        return comment is null
+            ? Missing(id)
+            : CreatedAtAction(nameof(GetComment), new { id, commentIndex = comment.CommentIndex }, comment);
+    }
+
+    [HttpPatch("{id}/comments/{commentIndex}")]
+    [ProducesResponseType(typeof(IncidentCommentResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<IncidentCommentResponse>> UpdateComment(Guid id, int commentIndex, UpdateCommentRequest request, CancellationToken ct)
+    {
+        if (IncidentValidator.CommentError(request.Body) is { } error)
+        {
+            return Invalid([error]);
+        }
+
+        if (request.ExpectedRevision is not { } expectedRevision)
+        {
+            return Invalid(["expectedRevision is required."]);
+        }
+
+        try
+        {
+            var comment = await incidentService.UpdateCommentBodyAsync(id, commentIndex, request.Body, expectedRevision, CurrentUserId(), ct);
+            return comment is null ? MissingComment(id, commentIndex) : comment;
+        }
+        catch (CommentCreatorOnlyException ex)
+        {
+            return Forbidden(ex);
+        }
+        catch (CommentRevisionConflictException ex)
+        {
+            return CommentRevisionConflict(ex);
+        }
+    }
+
     [HttpGet("{id}/events")]
     [ProducesResponseType(typeof(List<EventResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
@@ -227,6 +295,43 @@ public class IncidentsController(IIncidentService incidentService, EventService 
     {
         var history = await incidentService.GetHistoryAsync(id, ct);
         return history is null ? Missing(id) : history;
+    }
+
+    private NotFoundObjectResult MissingComment(Guid id, int commentIndex)
+    {
+        return NotFound(new ProblemDetails
+        {
+            Title = "Not found",
+            Detail = $"No comment {commentIndex} on incident {id}.",
+            Status = StatusCodes.Status404NotFound
+        });
+    }
+
+    private ObjectResult Forbidden(CommentCreatorOnlyException ex)
+    {
+        return StatusCode(StatusCodes.Status403Forbidden, new ProblemDetails
+        {
+            Title = "Forbidden",
+            Detail = ex.Message,
+            Status = StatusCodes.Status403Forbidden,
+            Extensions = { ["commentIndex"] = ex.CommentIndex }
+        });
+    }
+
+    private ConflictObjectResult CommentRevisionConflict(CommentRevisionConflictException ex)
+    {
+        return Conflict(new ProblemDetails
+        {
+            Title = "Revision conflict",
+            Detail = ex.Message,
+            Status = StatusCodes.Status409Conflict,
+            Extensions =
+            {
+                ["commentIndex"] = ex.CommentIndex,
+                ["currentRevision"] = ex.CurrentRevision,
+                ["currentValue"] = ex.CurrentValue
+            }
+        });
     }
 
     private int CurrentUserId()

@@ -1,6 +1,7 @@
 import type { AiConfidence } from "~/interfaces/IAiAnalysis";
 import type { EventSeverity } from "~/interfaces/IEvent";
 import type { IncidentPriority, IncidentStatus } from "~/interfaces/IIncident";
+import type { RejectedEventReason, RejectedEventSource } from "~/interfaces/IRejectedEvent";
 
 export const statusLabels: Record<IncidentStatus, string> = {
   Open: "Open",
@@ -83,4 +84,19 @@ export const aiConfidenceTextColors: Record<AiConfidence, string> = {
   High: "font-semibold text-crit",
   Medium: "font-medium text-high",
   Low: "text-text-3",
+};
+
+export const rejectedReasonLabels: Record<RejectedEventReason, string> = {
+  Malformed: "Broken JSON",
+  Invalid: "Invalid event",
+};
+
+export const rejectedReasonTextColors: Record<RejectedEventReason, string> = {
+  Malformed: "text-crit",
+  Invalid: "text-high",
+};
+
+export const rejectedSourceLabels: Record<RejectedEventSource, string> = {
+  Queue: "Queue",
+  Http: "HTTP",
 };

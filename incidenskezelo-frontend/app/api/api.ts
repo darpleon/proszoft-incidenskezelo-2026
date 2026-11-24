@@ -1,9 +1,10 @@
 import axiosInstance from "./axios.config";
 import { aiRequestTimeoutMs } from "~/constants/constants";
-import type { AiModel, IAiAnalysis } from "~/interfaces/IAiAnalysis";
+import type { AiModel, IAiAnalysis, IStoredAiAnalysis } from "~/interfaces/IAiAnalysis";
 import type { IEvent } from "~/interfaces/IEvent";
 import type { IHealth } from "~/interfaces/IHealth";
 import type { ICreateIncidentRequest, IIncident, IncidentPriority, IncidentStatus } from "~/interfaces/IIncident";
+import type { IRejectedEvent } from "~/interfaces/IRejectedEvent";
 import type { IIncidentChange } from "~/interfaces/IIncidentChange";
 import type { IService } from "~/interfaces/IService";
 import type { IAssignableUser, ILoginResponse, IUser, UserRole } from "~/interfaces/IUser";
@@ -47,15 +48,22 @@ const Event = {
   getLatest: () => axiosInstance.get<IEvent[]>(`/events`),
 };
 
+const RejectedEvent = {
+  getLatest: () => axiosInstance.get<IRejectedEvent[]>(`/rejected-events`),
+};
+
 const Ai = {
   analyze: (incidentId: string, model: AiModel) =>
     axiosInstance.post<IAiAnalysis>(`/ai/analyze/${incidentId}`, { model }, { timeout: aiRequestTimeoutMs }),
+
+  getLatest: (incidentId: string) =>
+    axiosInstance.get<IStoredAiAnalysis>(`/ai/analyze/${incidentId}`),
 };
 
 const Service = {
   getAll: () => axiosInstance.get<IService[]>(`/services`),
 };
 
-const api = { Health, User, Incident, Event, Service, Ai };
+const api = { Health, User, Incident, Event, RejectedEvent, Service, Ai };
 
 export default api;

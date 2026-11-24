@@ -14,6 +14,8 @@ namespace incidenskezelo_backend.Data
 
         public DbSet<Event> Events => Set<Event>();
 
+        public DbSet<RejectedEvent> RejectedEvents => Set<RejectedEvent>();
+
         public DbSet<User> Users => Set<User>();
 
         public DbSet<Incident> Incidents => Set<Incident>();
@@ -81,6 +83,18 @@ namespace incidenskezelo_backend.Data
                 entity.Property(evt => evt.ReceivedAtUtc).HasPrecision(3);
                 entity.HasIndex(evt => evt.SourceEventId).IsUnique();
                 entity.HasOne(evt => evt.Service).WithMany().HasForeignKey(evt => evt.ServiceId).OnDelete(DeleteBehavior.NoAction);
+            });
+
+            modelBuilder.Entity<RejectedEvent>(entity =>
+            {
+                entity.ToTable("RejectedEvent", table =>
+                {
+                    table.HasCheckConstraint("CK_RejectedEvent_Source", InList<RejectedEventSource>("Source"));
+                    table.HasCheckConstraint("CK_RejectedEvent_Reason", InList<RejectedEventReason>("Reason"));
+                });
+                entity.Property(rejected => rejected.Error).HasMaxLength(1000);
+                entity.Property(rejected => rejected.RawPayload).HasColumnType("nvarchar(max)");
+                entity.Property(rejected => rejected.ReceivedAtUtc).HasPrecision(3);
             });
             modelBuilder.Entity<User>(entity =>
             {

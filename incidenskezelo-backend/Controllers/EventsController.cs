@@ -1,5 +1,6 @@
 using incidenskezelo_backend.Configuration;
 using incidenskezelo_backend.Contracts;
+using incidenskezelo_backend.Models;
 using incidenskezelo_backend.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -40,7 +41,7 @@ public class EventsController : ControllerBase
         using var body = new MemoryStream();
         await Request.Body.CopyToAsync(body, cancellationToken);
 
-        var outcome = await _ingestService.IngestAsync(body.ToArray(), cancellationToken);
+        var outcome = await _ingestService.IngestAsync(body.ToArray(), RejectedEventSource.Http, cancellationToken);
 
         return outcome.Status switch
         {

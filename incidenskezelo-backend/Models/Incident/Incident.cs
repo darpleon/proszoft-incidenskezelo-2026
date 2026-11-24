@@ -71,6 +71,8 @@ public class Incident
 
     public List<IncidentAssigneeChange> AssigneeHistory { get; private set; } = [];
 
+    public List<IncidentEventLink> EventLinkHistory { get; private set; } = [];
+
     public List<Event> Events { get; private set; } = [];
 
     public bool UpdateTitle(string newTitle, ChangeContext context)
@@ -124,6 +126,15 @@ public class Incident
         AssigneeUserId = newAssignee?.UserId;
         Assignee = newAssignee;
         return true;
+    }
+
+    public void LinkEvents(IEnumerable<Event> events, ChangeContext context)
+    {
+        foreach (var evt in events)
+        {
+            Events.Add(evt);
+            EventLinkHistory.Add(new IncidentEventLink(this, evt.EventId, context));
+        }
     }
 
     public void TransitionTo(IncidentStatus next, ChangeContext context)

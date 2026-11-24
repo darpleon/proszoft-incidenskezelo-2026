@@ -31,6 +31,9 @@ namespace incidenskezelo_backend.Data
         public DbSet<IncidentPriorityChange> IncidentPriorityChanges => Set<IncidentPriorityChange>();
 
         public DbSet<IncidentAssigneeChange> IncidentAssigneeChanges => Set<IncidentAssigneeChange>();
+
+        public DbSet<IncidentEventLink> IncidentEventLinks => Set<IncidentEventLink>();
+
         public DbSet<StoredIncidentAnalysis> StoredIncidentAnalyses =>
             Set<StoredIncidentAnalysis>();
 
@@ -134,6 +137,11 @@ namespace incidenskezelo_backend.Data
                     .WithMany()
                     .HasForeignKey(analysis => analysis.IncidentId)
                     .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne<User>()
+                    .WithMany()
+                    .HasForeignKey(analysis => analysis.RequestedByUserId)
+                    .OnDelete(DeleteBehavior.NoAction);
             });
 
             var incident = modelBuilder.Entity<Incident>();
@@ -208,6 +216,16 @@ namespace incidenskezelo_backend.Data
             assigneeChange.HasIndex(c => new { c.IncidentId, c.OccurredAtUtc });
             assigneeChange.HasOne<User>().WithMany().HasForeignKey(c => c.OldValue).OnDelete(DeleteBehavior.NoAction);
             assigneeChange.HasOne<User>().WithMany().HasForeignKey(c => c.NewValue).OnDelete(DeleteBehavior.NoAction);
+
+            incident.HasMany(i => i.EventLinkHistory)
+                .WithOne(c => c.Incident)
+                .HasForeignKey(c => c.IncidentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            var eventLink = modelBuilder.Entity<IncidentEventLink>();
+
+            eventLink.HasIndex(c => new { c.IncidentId, c.OccurredAtUtc });
+            eventLink.HasOne<Event>().WithMany().HasForeignKey(c => c.EventId).OnDelete(DeleteBehavior.NoAction);
         }
 
         private sealed class AsUtcConverter() : ValueConverter<DateTime, DateTime>(

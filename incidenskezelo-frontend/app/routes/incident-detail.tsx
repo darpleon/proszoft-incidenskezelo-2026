@@ -1,5 +1,5 @@
 import { Tabs } from "@mantine/core";
-import { IconFileDescription, IconMessage, IconSparkles, IconTimelineEvent } from "@tabler/icons-react";
+import { IconFileDescription, IconHistory, IconMessage, IconSparkles, IconTimelineEvent } from "@tabler/icons-react";
 import { isAxiosError } from "axios";
 import { useState } from "react";
 import { useRevalidator } from "react-router";
@@ -11,11 +11,13 @@ import { EmptyState } from "~/components/EmptyState";
 import { EventsTable } from "~/components/EventsTable";
 import { FormAlert } from "~/components/FormAlert";
 import { IncidentDetailHeader } from "~/components/IncidentDetailHeader";
+import { IncidentHistory } from "~/components/IncidentHistory";
 import { IncidentOverview } from "~/components/IncidentOverview";
 import useAuth from "~/hooks/useAuth";
 import type { IComment } from "~/interfaces/IComment";
 import type { IEvent } from "~/interfaces/IEvent";
 import type { IncidentPriority, IncidentStatus } from "~/interfaces/IIncident";
+import type { IIncidentChange } from "~/interfaces/IIncidentChange";
 import type { IAssignableUser } from "~/interfaces/IUser";
 import type { Route } from "./+types/incident-detail";
 
@@ -29,18 +31,26 @@ function TabCount({ count }: { count: number }) {
 
 export async function clientLoader({ params }: Route.ClientLoaderArgs) {
   try {
-    const [incident, assignableUsers, events] = await Promise.all([
+    const [incident, assignableUsers, events, history] = await Promise.all([
       api.Incident.getById(params.incidentId),
       api.User.getAssignable(),
       api.Incident.getEvents(params.incidentId),
+      api.Incident.getHistory(params.incidentId),
     ]);
-    return { incident: incident.data, assignableUsers: assignableUsers.data, events: events.data, loadError: null };
+    return {
+      incident: incident.data,
+      assignableUsers: assignableUsers.data,
+      events: events.data,
+      history: history.data,
+      loadError: null,
+    };
   } catch (error) {
     const isMissing = isAxiosError(error) && (error.response?.status === 404 || error.response?.status === 400);
     return {
       incident: null,
       assignableUsers: [] as IAssignableUser[],
       events: [] as IEvent[],
+      history: [] as IIncidentChange[],
       loadError: isMissing ? "Incident not found." : "The incident could not be loaded.",
     };
   }
@@ -59,7 +69,7 @@ function changeErrorMessage(error: unknown) {
 }
 
 export default function IncidentDetail({ loaderData }: Route.ComponentProps) {
-  const { incident, assignableUsers, events, loadError } = loaderData;
+  const { incident, assignableUsers, events, history, loadError } = loaderData;
   const { user } = useAuth();
   const revalidator = useRevalidator();
   const [allComments, setAllComments] = useState<IComment[]>([]);
@@ -157,6 +167,9 @@ export default function IncidentDetail({ loaderData }: Route.ComponentProps) {
           <Tabs.Tab value="ai" leftSection={<IconSparkles size={14} />}>
             AI analysis
           </Tabs.Tab>
+          <Tabs.Tab value="history" leftSection={<IconHistory size={14} />}>
+            History
+          </Tabs.Tab>
         </Tabs.List>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-[22px] max-[920px]:overflow-visible max-[680px]:px-4">
@@ -174,6 +187,9 @@ export default function IncidentDetail({ loaderData }: Route.ComponentProps) {
           </Tabs.Panel>
           <Tabs.Panel value="ai">
             <AiAnalysisPanel incidentId={incident.id} events={events} />
+          </Tabs.Panel>
+          <Tabs.Panel value="history">
+            <IncidentHistory changes={history} />
           </Tabs.Panel>
         </div>
       </Tabs>

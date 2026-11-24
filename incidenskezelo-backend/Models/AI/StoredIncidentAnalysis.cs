@@ -11,4 +11,6 @@ public sealed class StoredIncidentAnalysis
     public string ResultJson { get; set; } = string.Empty;
 
     public DateTime AnalyzedAtUtc { get; set; }
+
+    public int? RequestedByUserId { get; set; }
 }

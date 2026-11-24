@@ -4,6 +4,7 @@ using incidenskezelo_backend.Models.Incident;
 using incidenskezelo_backend.Models.Incident.Changes;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace incidenskezelo_backend.Services;
@@ -246,7 +247,7 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
 
         var incident = Incident.Create(request.Title, request.Description, request.Priority, changeContext);
         incident.UpdateAssignee(assignee, changeContext);
-        incident.Events.AddRange(events);
+        incident.LinkEvents(events, changeContext);
         context.Incidents.Add(incident);
         await context.SaveChangesAsync(ct);
 
@@ -407,6 +408,12 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
                 c.ActorUserId,
                 c.Actor != null ? c.Actor.Name : null))
             .ToListAsync(ct);
+        var eventLinks = await context.IncidentEventLinks.AsNoTracking()
+            .Where(c => c.IncidentId == incidentId)
+            .OrderBy(c => c.Id)
+            .Select(c => new IncidentChangeResponse("eventLinked", c.OccurredAtUtc, null, c.EventId.ToString(), c.ActorUserId, c.Actor != null ? c.Actor.Name : null))
+            .ToListAsync(ct);
+        var analyses = await MapAnalysesAsync(incidentId.Value, ct);
 
         return created
             .Concat(status)
@@ -414,8 +421,35 @@ public class IncidentService(AppDbContext context, TimeProvider timeProvider) : 
             .Concat(description)
             .Concat(priority)
             .Concat(assignee)
+            .Concat(eventLinks)
+            .Concat(analyses)
             .OrderBy(e => e.OccurredAtUtc)
             .ToList();
+    }
+
+    private async Task<List<IncidentChangeResponse>> MapAnalysesAsync(int incidentId, CancellationToken ct)
+    {
+        var rows = await context.StoredIncidentAnalyses.AsNoTracking()
+            .Where(analysis => analysis.IncidentId == incidentId)
+            .OrderBy(analysis => analysis.AnalysisId)
+            .Select(analysis => new
+            {
+                analysis.AnalyzedAtUtc,
+                analysis.ResultJson,
+                analysis.RequestedByUserId,
+                RequesterName = context.Users.Where(user => user.UserId == analysis.RequestedByUserId).Select(user => user.Name).FirstOrDefault()
+            })
+            .ToListAsync(ct);
+
+        return rows
+            .Select(r => new IncidentChangeResponse("aiAnalysis", r.AnalyzedAtUtc, null, ReadModel(r.ResultJson), r.RequestedByUserId, r.RequesterName))
+            .ToList();
+    }
+
+    private static string? ReadModel(string resultJson)
+    {
+        using var json = JsonDocument.Parse(resultJson);
+        return json.RootElement.TryGetProperty("model", out var model) ? model.GetString() : null;
     }
 
     private static async Task<List<IncidentChangeResponse>> MapKindAsync<T>(

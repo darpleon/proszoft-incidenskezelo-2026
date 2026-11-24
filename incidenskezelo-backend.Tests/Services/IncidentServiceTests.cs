@@ -1,5 +1,6 @@
 using incidenskezelo_backend.Data;
 using incidenskezelo_backend.Models;
+using incidenskezelo_backend.Models.AI;
 using incidenskezelo_backend.Models.Incident;
 using incidenskezelo_backend.Services;
 using incidenskezelo_backend.Tests.Helpers;
@@ -116,6 +117,47 @@ public class IncidentServiceTests
 
         var history = await _incidentService.GetHistoryAsync(incident.Id, CancellationToken.None);
         Assert.AreEqual(1, history!.Count(entry => entry.Kind == "assignee"));
+    }
+
+
+    [TestMethod]
+    public async Task CreateAsync_WithEvents_LogsEventLinks()
+    {
+        var first = AddEvent();
+        var second = AddEvent();
+
+        var incident = await CreateIncidentAsync("Orders API errors", eventIds: [first.EventId, second.EventId]);
+
+        var history = await _incidentService.GetHistoryAsync(incident.Id, CancellationToken.None);
+        var links = history!.Where(entry => entry.Kind == "eventLinked").ToList();
+        CollectionAssert.AreEquivalent(
+            new[] { first.EventId.ToString(), second.EventId.ToString() },
+            links.Select(entry => entry.NewValue).ToArray());
+        Assert.IsTrue(links.All(entry => entry.ActorUserId == _operator.UserId));
+    }
+
+
+    [TestMethod]
+    public async Task GetHistoryAsync_StoredAnalysis_ReturnsAiAnalysisWithRequester()
+    {
+        var incident = await CreateIncidentAsync();
+        _clock.Advance(TimeSpan.FromMinutes(5));
+        _dbContext.StoredIncidentAnalyses.Add(new StoredIncidentAnalysis
+        {
+            IncidentId = _dbContext.Incidents.Single(i => i.PublicId == incident.Id).IncidentId,
+            ResultJson = """{"model":"Qwen3","summary":"Pool is full."}""",
+            AnalyzedAtUtc = _clock.GetUtcNow().UtcDateTime,
+            RequestedByUserId = _operator.UserId
+        });
+        await _dbContext.SaveChangesAsync();
+
+        var history = await _incidentService.GetHistoryAsync(incident.Id, CancellationToken.None);
+
+        var analysis = history!.Last();
+        Assert.AreEqual("aiAnalysis", analysis.Kind);
+        Assert.AreEqual("Qwen3", analysis.NewValue);
+        Assert.AreEqual(_operator.UserId, analysis.ActorUserId);
+        Assert.AreEqual("Kovács Anna", analysis.ActorName);
     }
 
 

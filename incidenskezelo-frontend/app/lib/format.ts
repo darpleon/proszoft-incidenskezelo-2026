@@ -20,3 +20,22 @@ const timeFormat = new Intl.DateTimeFormat("en-GB", {
 export function formatTime(utc: string): string {
   return timeFormat.format(new Date(utc));
 }
+
+const dayKeyFormat = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Budapest" });
+
+const dayFormat = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  timeZone: "Europe/Budapest",
+});
+
+export function formatDay(utc: string): string {
+  const day = dayKeyFormat.format(new Date(utc));
+  const today = dayKeyFormat.format(new Date());
+  const yesterday = dayKeyFormat.format(new Date(Date.now() - 86_400_000));
+
+  if (day === today) return "Today";
+  if (day === yesterday) return "Yesterday";
+  return dayFormat.format(new Date(utc));
+}

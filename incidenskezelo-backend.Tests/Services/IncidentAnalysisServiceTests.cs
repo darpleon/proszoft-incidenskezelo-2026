@@ -844,7 +844,7 @@ public class IncidentAnalysisServiceTests
             TimeProvider.System);
 
         await Assert.ThrowsExactlyAsync<AiProviderUnavailableException>(() =>
-            analysisService.AnalyzeAsync(incident.Id, AiProvider.Qwen3, CancellationToken.None));
+            analysisService.AnalyzeAsync(incident.Id, AiProvider.Qwen3, user.UserId, CancellationToken.None));
 
         Assert.AreEqual(0, dbContext.StoredIncidentAnalyses.Count());
     }

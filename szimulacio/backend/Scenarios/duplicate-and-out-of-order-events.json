@@ -27,14 +27,14 @@
     },
     {
       "delaySeconds": 5,
+      "occurredAtOffsetSeconds": -20,
       "correlationKey": "duplicate-and-out-of-order-events",
       "serviceCode": "postgres-main",
       "eventType": "DbConnectionError",
       "severity": "Critical",
       "summary": "The database connection has failed",
       "payload": {
-        "eventRole": "database-failure",
-        "occurredAtOffsetSeconds": -20
+        "eventRole": "database-failure"
       }
     },
     {
@@ -50,14 +50,14 @@
     },
     {
       "delaySeconds": 5,
+      "occurredAtOffsetSeconds": -60,
       "correlationKey": "duplicate-and-out-of-order-events",
       "serviceCode": "postgres-main",
       "eventType": "DbConnectionError",
       "severity": "Critical",
       "summary": "Delayed delivery test: send a database error that occurred earlier",
       "payload": {
-        "eventRole": "delayed-event",
-        "occurredAtOffsetSeconds": -60
+        "eventRole": "delayed-event"
       }
     }
   ]

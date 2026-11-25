@@ -314,9 +314,9 @@ public class ScenarioRunnerTests
 
         Assert.IsTrue(restarted, "A kivétel után a runnernek újraindíthatónak kell lennie.");
 
-        await publisher.WaitForCallCountAsync(2);
+        await publisher.WaitForCallCountAsync(3);
 
-        Assert.AreEqual(2, publisher.CallCount);
+        Assert.AreEqual(3, publisher.CallCount);
     }
 
     private static ScenarioRunner CreateRunner(IEventPublisher publisher)

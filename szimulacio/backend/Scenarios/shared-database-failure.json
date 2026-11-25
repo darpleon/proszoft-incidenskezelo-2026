@@ -1,0 +1,54 @@
+{
+  "id": "shared-database-failure",
+  "name": "Shared Dependency Failure (22.2)",
+  "steps": [
+    {
+      "delaySeconds": 0,
+      "correlationKey": "shared-database-failure",
+      "serviceCode": "postgres-main",
+      "eventType": "DbConnectionError",
+      "severity": "Critical",
+      "summary": "The database connection has failed",
+      "payload": {
+        "dependency": "mssql",
+        "errorCode": "CONNECTION_FAILED"
+      }
+    },
+    {
+      "delaySeconds": 10,
+      "correlationKey": "shared-database-failure",
+      "serviceCode": "orders-api",
+      "eventType": "JobFailed",
+      "severity": "Error",
+      "summary": "A backend API database query has failed",
+      "payload": {
+        "dependency": "database",
+        "operation": "query"
+      }
+    },
+    {
+      "delaySeconds": 10,
+      "correlationKey": "shared-database-failure",
+      "serviceCode": "web-portal",
+      "eventType": "HighErrorRate",
+      "severity": "Error",
+      "summary": "The web application error rate has increased due to the database failure",
+      "payload": {
+        "errorRatePercent": 28,
+        "suspectedDependency": "database"
+      }
+    },
+    {
+      "delaySeconds": 10,
+      "correlationKey": "shared-database-failure",
+      "serviceCode": "batch-worker",
+      "eventType": "JobFailed",
+      "severity": "Critical",
+      "summary": "Background worker jobs are failing",
+      "payload": {
+        "failedJobs": 9,
+        "dependency": "database"
+      }
+    }
+  ]
+}

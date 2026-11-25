@@ -342,6 +342,129 @@ public class IncidentServiceTests
     }
 
 
+    // ÚJ TESZT: az új incidens kezdeti állapotát és revízióit ellenőrzi. A létrehozási auditbejegyzést a meglévő CreateAsync_WithActor teszt fedi le.
+    [TestMethod]
+    public async Task CreateAsync_ValidRequest_CreatesOpenIncidentWithInitialValues()
+    {
+        var request = new CreateIncidentRequest(
+            "Orders API hibák",
+            "A POST /orders kérések 500-as hibát adnak.",
+            IncidentPriority.High);
+
+        var created = await _incidentService.CreateAsync(
+            request,
+            _operator.UserId,
+            CancellationToken.None);
+
+        Assert.AreEqual(IncidentStatus.Open, created.Status);
+        Assert.AreEqual(IncidentPriority.High, created.Priority);
+        Assert.AreEqual("Orders API hibák", created.Title);
+        Assert.AreEqual(0, created.Revisions.Title);
+        Assert.AreEqual(0, created.Revisions.Description);
+        Assert.AreEqual(0, created.Revisions.Priority);
+        Assert.AreEqual(0, created.Revisions.Status);
+        Assert.AreEqual(0, created.Revisions.Assignee);
+        Assert.AreEqual(1, _dbContext.Incidents.Count());
+    }
+
+
+    // ÚJ TESZT: megengedett állapotváltáskor módosul az állapot és a revízió, valamint bekerül a változás az incidens előzményeibe.
+    [TestMethod]
+    public async Task TransitionAsync_AllowedTransition_UpdatesStatusAndHistory()
+    {
+        var incident = await CreateIncidentAsync();
+
+        var updated = await _incidentService.TransitionAsync(
+            incident.Id,
+            IncidentStatus.Investigating,
+            expectedRevision: 0,
+            _operator.UserId,
+            CancellationToken.None);
+
+        Assert.IsNotNull(updated);
+        Assert.AreEqual(IncidentStatus.Investigating, updated.Status);
+        Assert.AreEqual(1, updated.Revisions.Status);
+
+        var history = await _incidentService.GetHistoryAsync(
+            incident.Id,
+            CancellationToken.None);
+
+        Assert.IsNotNull(history);
+        var statusChange = history.Single(change => change.Kind == "status");
+
+        Assert.AreEqual("Open", statusChange.OldValue);
+        Assert.AreEqual("Investigating", statusChange.NewValue);
+        Assert.AreEqual(_operator.UserId, statusChange.ActorUserId);
+    }
+
+    // ÚJ TESZT: tiltott állapotváltás hibát ad, és nem módosítja az incidens állapotát, revízióját vagy előzményeit.
+    [TestMethod]
+    public async Task TransitionAsync_DisallowedTransition_RejectsChange()
+    {
+        var incident = await CreateIncidentAsync();
+
+        await Assert.ThrowsExactlyAsync<InvalidOperationException>(() =>
+            _incidentService.TransitionAsync(
+                incident.Id,
+                IncidentStatus.Resolved,
+                expectedRevision: 0,
+                _operator.UserId,
+                CancellationToken.None));
+
+        var current = await _incidentService.GetByIdAsync(
+            incident.Id,
+            CancellationToken.None);
+
+        Assert.IsNotNull(current);
+        Assert.AreEqual(IncidentStatus.Open, current.Status);
+        Assert.AreEqual(0, current.Revisions.Status);
+
+        var history = await _incidentService.GetHistoryAsync(
+            incident.Id,
+            CancellationToken.None);
+
+        Assert.IsNotNull(history);
+        Assert.AreEqual(1, history.Count);
+    }
+
+    // ÚJ TESZT: az első módosítás után a korábbi státuszrevízióval érkező második kérés konfliktust kap, az első módosítás pedig megmarad.
+    [TestMethod]
+    public async Task TransitionAsync_StaleRevision_RejectsSecondClientChange()
+    {
+        var incident = await CreateIncidentAsync();
+
+        var firstUpdate = await _incidentService.TransitionAsync(
+            incident.Id,
+            IncidentStatus.Investigating,
+            expectedRevision: 0,
+            _operator.UserId,
+            CancellationToken.None);
+
+        Assert.IsNotNull(firstUpdate);
+        Assert.AreEqual(1, firstUpdate.Revisions.Status);
+
+        var conflict = await Assert.ThrowsExactlyAsync<RevisionConflictException>(() =>
+            _incidentService.TransitionAsync(
+                incident.Id,
+                IncidentStatus.InProgress,
+                expectedRevision: 0,
+                _operator.UserId,
+                CancellationToken.None));
+
+        Assert.AreEqual("status", conflict.Field);
+        Assert.AreEqual(1, conflict.CurrentRevision);
+        Assert.AreEqual("Investigating", conflict.CurrentValue);
+        Assert.AreEqual(1, conflict.Current.Status);
+
+        var current = await _incidentService.GetByIdAsync(
+            incident.Id,
+            CancellationToken.None);
+
+        Assert.IsNotNull(current);
+        Assert.AreEqual(IncidentStatus.Investigating, current.Status);
+        Assert.AreEqual(1, current.Revisions.Status);
+    }
+
     private async Task<IncidentResponse> CreateIncidentAsync()
     {
         var request = new CreateIncidentRequest("Database connection lost", "postgres-main refuses connections.", IncidentPriority.High);

@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using System;
 using System.Linq;
+using incidenskezelo_backend.Services.IncidentAutomation;
 
 namespace incidenskezelo_backend.Services;
 
@@ -21,46 +22,114 @@ public record EventIngestResult(EventIngestStatus Status, EventResponse? Event, 
 
 public class EventService
 {
+    private readonly IncidentCorrelationService _correlationService;
+    private readonly AutomaticIncidentService _automaticIncidentService;
     private const int UniqueIndexViolation = 2601;
     private const int UniqueConstraintViolation = 2627;
 
     private readonly AppDbContext _dbContext;
     private readonly ILogger<EventService> _logger;
 
-    public EventService(AppDbContext dbContext, ILogger<EventService> logger)
+    public EventService(AppDbContext dbContext, ILogger<EventService> logger, IncidentCorrelationService correlationService, AutomaticIncidentService automaticIncidentService)
     {
         _dbContext = dbContext;
         _logger = logger;
+        _correlationService = correlationService;
+        _automaticIncidentService = automaticIncidentService;
     }
 
 
-    public async Task<EventIngestResult> IngestAsync(CreateEventRequest request, CancellationToken cancellationToken)
+    public async Task<EventIngestResult> IngestAsync(
+    CreateEventRequest request,
+    CancellationToken cancellationToken)
     {
         if (!TryParseName(request.EventType, out EventType eventType))
         {
-            return new EventIngestResult(EventIngestStatus.Invalid, null, $"Unknown event type '{request.EventType}'.");
+            return new EventIngestResult(
+                EventIngestStatus.Invalid,
+                null,
+                $"Unknown event type '{request.EventType}'.");
         }
 
         if (!TryParseName(request.Severity, out Severity severity))
         {
-            return new EventIngestResult(EventIngestStatus.Invalid, null, $"Unknown severity '{request.Severity}'.");
+            return new EventIngestResult(
+                EventIngestStatus.Invalid,
+                null,
+                $"Unknown severity '{request.Severity}'.");
         }
 
         var contentHash = CreateContentHash(request, eventType, severity);
+        var strategy = _dbContext.Database.CreateExecutionStrategy();
 
+        try
+        {
+            return await strategy.ExecuteAsync(async () =>
+            {
+                // SQL retry esetén a tranzakció újrafut ugyanazzal a DbContexttel.
+                // A tracker ürítése eltávolítja az előző próbálkozás állapotát.
+                _dbContext.ChangeTracker.Clear();
+
+                await using var transaction =
+                    await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+                var result = await IngestWithinTransactionAsync(
+                    request,
+                    eventType,
+                    severity,
+                    contentHash,
+                    cancellationToken);
+
+                await transaction.CommitAsync(cancellationToken);
+                return result;
+            });
+        }
+        catch (DbUpdateException exception) when (IsDuplicateKey(exception))
+        {
+            // Egy párhuzamos kézbesítés elmenthette előbb ugyanazt az eventet.
+            _dbContext.ChangeTracker.Clear();
+
+            var concurrentDuplicate =
+                await FindBySourceIdAsync(contentHash, cancellationToken);
+
+            return new EventIngestResult(
+                EventIngestStatus.AlreadyReceived,
+                concurrentDuplicate,
+                null);
+        }
+    }
+
+    private async Task<EventIngestResult> IngestWithinTransactionAsync(
+    CreateEventRequest request,
+    EventType eventType,
+    Severity severity,
+    string contentHash,
+    CancellationToken cancellationToken)
+    {
         var existing = await FindBySourceIdAsync(contentHash, cancellationToken);
+
         if (existing is not null)
         {
-            _logger.LogInformation("Duplicate event {ContentHash} ignored", contentHash);
-            return new EventIngestResult(EventIngestStatus.AlreadyReceived, existing, null);
+            _logger.LogInformation(
+                "Duplicate event {ContentHash} ignored",
+                contentHash);
+
+            return new EventIngestResult(
+                EventIngestStatus.AlreadyReceived,
+                existing,
+                null);
         }
 
         var service = await _dbContext.Services.SingleOrDefaultAsync(
             item => item.Code == request.ServiceCode && item.IsActive,
             cancellationToken);
+
         if (service is null)
         {
-            return new EventIngestResult(EventIngestStatus.Invalid, null, $"Unknown service code '{request.ServiceCode}'.");
+            return new EventIngestResult(
+                EventIngestStatus.Invalid,
+                null,
+                $"Unknown service code '{request.ServiceCode}'.");
         }
 
         var newEvent = new Event
@@ -78,22 +147,67 @@ public class EventService
 
         _dbContext.Events.Add(newEvent);
 
-        try
+        // Külön mentés kell, hogy az event backend által kiosztott EventId-ja
+        // rendelkezésre álljon az IncidentEventLink auditbejegyzéshez.
+        await _dbContext.SaveChangesAsync(cancellationToken);
+
+        var classification = IncidentCorrelationRules.Classify(eventType);
+        var candidate = await _correlationService.FindCandidateAsync(
+            newEvent,
+            cancellationToken);
+
+        Guid? linkedIncidentPublicId = null;
+
+        if (candidate.Status == IncidentCandidateStatus.Unique)
         {
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            var incident = candidate.Incident!;
+
+            _automaticIncidentService.AttachEvent(incident, newEvent);
+            linkedIncidentPublicId = incident.PublicId;
+
+            _logger.LogInformation(
+                "Event {EventId} linked to incident {IncidentId} by {MatchRule}",
+                newEvent.EventId,
+                incident.PublicId,
+                candidate.MatchRule);
         }
-        catch (DbUpdateException exception) when (IsDuplicateKey(exception))
+        else if (candidate.Status == IncidentCandidateStatus.Ambiguous)
         {
-            _dbContext.Entry(newEvent).State = EntityState.Detached;
-            var concurrentDuplicate = await FindBySourceIdAsync(contentHash, cancellationToken);
-            return new EventIngestResult(EventIngestStatus.AlreadyReceived, concurrentDuplicate, null);
+            _logger.LogWarning(
+                "Event {EventId} matched multiple incidents by {MatchRule}; left unlinked",
+                newEvent.EventId,
+                candidate.MatchRule);
+        }
+        else if (classification.Role == IncidentEventRole.Trigger &&
+                 classification.Family is { } family)
+        {
+            var incident = _automaticIncidentService.CreateForEvent(
+                newEvent,
+                service,
+                family);
+
+            linkedIncidentPublicId = incident.PublicId;
+
+            _logger.LogInformation(
+                "Incident {IncidentId} created automatically for event {EventId}",
+                incident.PublicId,
+                newEvent.EventId);
+        }
+        else
+        {
+            _logger.LogInformation(
+                "Event {EventId} stored without an incident",
+                newEvent.EventId);
         }
 
-        _logger.LogInformation(
-            "Event {EventId} stored ({ContentHash}, {ServiceCode}, {EventType})",
-            newEvent.EventId, newEvent.SourceEventId, service.Code, newEvent.EventType);
+        // Elmenti az incidentet, az eventkapcsolatot és az esetleges prioritásváltozást.
+        // Státuszváltás nincs: automatikus lezárás nem történik.
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
-        return new EventIngestResult(EventIngestStatus.Created, ToResponse(newEvent, service.Code, null), null);
+        return new EventIngestResult(
+            EventIngestStatus.Created,
+            ToResponse(newEvent, service.Code, linkedIncidentPublicId),
+            null);
     }
 
     //hash számítás a tartalom alapján, hogy a duplikációt ellenőrizni lehessen
@@ -113,6 +227,7 @@ public class EventService
             writer.WriteString("eventType", eventType.ToString());
             writer.WriteString("severity", severity.ToString());
             writer.WriteString("occurredAtUtc", occurredAtUtc.ToString("O"));
+            writer.WriteString("correlationKey", request.CorrelationKey?.Trim().ToLowerInvariant());
 
             if (request.Summary is null)
                 writer.WriteNull("summary");

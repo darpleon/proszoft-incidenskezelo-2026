@@ -20,7 +20,7 @@ public class EventServiceTests
     public void Setup()
     {
         _dbContext = TestDbContextFactory.Create();
-        _eventService = new EventService(_dbContext, NullLogger<EventService>.Instance);
+        _eventService = TestEventServiceFactory.Create(_dbContext);
     }
 
 

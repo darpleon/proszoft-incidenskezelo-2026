@@ -1,12 +1,14 @@
-using System.Text;
 using incidenskezelo_backend.Configuration;
 using incidenskezelo_backend.Data;
 using incidenskezelo_backend.Models;
 using incidenskezelo_backend.Services;
+using incidenskezelo_backend.Services.IncidentAutomation;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using System.Text;
 
 namespace incidenskezelo_backend.Tests.Services;
 
@@ -24,10 +26,16 @@ public class EventIngestServiceTests
         var services = new ServiceCollection();
 
         services.AddLogging();
-        services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase(databaseName));
+        services.AddDbContext<AppDbContext>(options =>
+            options
+                .UseInMemoryDatabase(databaseName)
+                .ConfigureWarnings(warnings =>
+                    warnings.Ignore(InMemoryEventId.TransactionIgnoredWarning)));
         services.AddScoped<EventService>();
         services.AddScoped<RejectedEventService>();
         services.AddSingleton(TimeProvider.System);
+        services.AddScoped<IncidentCorrelationService>();
+        services.AddScoped<AutomaticIncidentService>();
 
         _serviceProvider = services.BuildServiceProvider();
 

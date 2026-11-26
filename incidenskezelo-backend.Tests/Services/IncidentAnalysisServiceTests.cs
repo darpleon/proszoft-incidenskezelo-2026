@@ -178,9 +178,7 @@ public class IncidentAnalysisServiceTests
             geminiService,
             localAiService);
 
-        var eventService = new EventService(
-            dbContext,
-            NullLogger<EventService>.Instance);
+        var eventService = TestEventServiceFactory.Create(dbContext);
 
         var analysisService = new IncidentAnalysisService(
             resolver,
@@ -340,9 +338,7 @@ public class IncidentAnalysisServiceTests
             geminiService,
             localAiService);
 
-        var eventService = new EventService(
-            dbContext,
-            NullLogger<EventService>.Instance);
+        var eventService = TestEventServiceFactory.Create(dbContext);
 
         var analysisService = new IncidentAnalysisService(
             resolver,
@@ -443,9 +439,7 @@ public class IncidentAnalysisServiceTests
             geminiService,
             localAiService);
 
-        var eventService = new EventService(
-            dbContext,
-            NullLogger<EventService>.Instance);
+        var eventService = TestEventServiceFactory.Create(dbContext);
 
         var analysisService = new IncidentAnalysisService(
             resolver,
@@ -527,9 +521,7 @@ public class IncidentAnalysisServiceTests
             geminiService,
             localAiService);
 
-        var eventService = new EventService(
-            dbContext,
-            NullLogger<EventService>.Instance);
+        var eventService = TestEventServiceFactory.Create(dbContext);
 
         var analysisService = new IncidentAnalysisService(
             resolver,
@@ -596,9 +588,7 @@ public class IncidentAnalysisServiceTests
             geminiService,
             localAiService);
 
-        var eventService = new EventService(
-            dbContext,
-            NullLogger<EventService>.Instance);
+        var eventService = TestEventServiceFactory.Create(dbContext);
 
         var analysisService = new IncidentAnalysisService(
             resolver,
@@ -709,9 +699,7 @@ public class IncidentAnalysisServiceTests
             }));
 
         var resolver = new AiServiceResolver(geminiService, localAiService);
-        var eventService = new EventService(
-            dbContext,
-            NullLogger<EventService>.Instance);
+        var eventService = TestEventServiceFactory.Create(dbContext);
 
         var analysisService = new IncidentAnalysisService(
             resolver,
@@ -839,7 +827,7 @@ public class IncidentAnalysisServiceTests
         var analysisService = new IncidentAnalysisService(
             new AiServiceResolver(geminiService, localAiService),
             incidentService,
-            new EventService(dbContext, NullLogger<EventService>.Instance),
+            TestEventServiceFactory.Create(dbContext),
             dbContext,
             TimeProvider.System);
 

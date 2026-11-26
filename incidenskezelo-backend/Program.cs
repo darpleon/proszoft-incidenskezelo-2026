@@ -9,6 +9,7 @@ using incidenskezelo_backend.Services.AI;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using incidenskezelo_backend.Services.IncidentAutomation;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -59,6 +60,8 @@ builder.Services.AddScoped<EventService>();
 builder.Services.AddScoped<RejectedEventService>();
 builder.Services.AddScoped<IIncidentService, IncidentService>();
 builder.Services.AddScoped<ServiceCatalogService>();
+builder.Services.AddScoped<IncidentCorrelationService>();
+builder.Services.AddScoped<AutomaticIncidentService>();
 
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<TokenService>();

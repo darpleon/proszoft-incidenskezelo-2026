@@ -1,0 +1,33 @@
+{
+  "id": "event-processing-error",
+  "name": "Event Processing Errors (22.5)",
+  "steps": [
+    {
+      "delaySeconds": 10,
+      "correlationKey": "event-processing-error 1",
+      "serviceCode": "phantom-sv",
+      "eventType": "HighLatency",
+      "severity": "Warning",
+      "summary": "Validation test: the event contains an unknown service code",
+      "payload": null
+    },
+    {
+      "delaySeconds": 10,
+      "correlationKey": "event-processing-error 2",
+      "serviceCode": "orders-api",
+      "eventType": "HighLatency",
+      "severity": "Warning",
+      "summary": "Validation test: use the supported enum value as a stand-in for an unknown event type",
+      "payload": null
+    },
+    {
+      "delaySeconds": 10,
+      "correlationKey": "event-processing-error 3",
+      "serviceCode": "orders-api",
+      "eventType": "HighLatency",
+      "severity": "Warning",
+      "summary": "Validation test: the event contains an unsupported severity value",
+      "payload": null
+    }
+  ]
+}
